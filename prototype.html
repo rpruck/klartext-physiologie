@@ -53,6 +53,7 @@
 }
 
 /* ── background variants ───────────────────────────────────────────── */
+body[data-bg="neutral"]{ --paper:#fbfbfb; --ink:#191c1e; --ink-soft:#5a6362; }
 body[data-bg="paper"]{ --paper:#faf8f3; --ink:#20262a; --ink-soft:#5d6b6a; }
 body[data-bg="white"]{ --paper:#ffffff; --ink:#191c1e; --ink-soft:#5a6362; }
 body[data-bg="sepia"]{ --paper:#f3ead6; --ink:#3b3225; --ink-soft:#6f6249; }
@@ -83,7 +84,7 @@ body[data-motion="0"] *{ animation:none !important; transition:none !important; 
 
 /* ── top bar ───────────────────────────────────────────────────────── */
 .topbar{
-  position:sticky; top:0; z-index:40;
+  position:sticky; top:0; z-index:58;   /* above the notes drawer (55) so its toggle stays clickable */
   display:flex; align-items:center; gap:.75rem;
   padding:.7rem clamp(1rem,4vw,2rem);
   background:color-mix(in srgb, var(--paper) 84%, transparent);
@@ -106,6 +107,7 @@ body[data-motion="0"] *{ animation:none !important; transition:none !important; 
   display:inline-flex; align-items:center; gap:.4rem;
 }
 .tb-btn:hover{ color:var(--ink); border-color:var(--accent-line); background:var(--accent-tint); }
+.tb-btn.active{ color:var(--accent-ink); border-color:var(--accent-line); background:var(--accent-tint); }
 
 /* ── layout: [pin rail] [reader] [note gutter], centred ────────────── */
 .stage{
@@ -523,7 +525,7 @@ body[data-bg="dark"] .ctx-item.danger{ color:#ff7a6b; }
 }
 </style>
 </head>
-<body data-bg="paper" data-hidedeco="1" data-figframe="hairline" data-motion="1">
+<body data-bg="neutral" data-hidedeco="1" data-figframe="hairline" data-motion="1">
 
 <!-- ── activation reveal (draws the page top→bottom) ─────────────────── -->
 <div class="activate" id="activate"></div>
@@ -535,13 +537,13 @@ body[data-bg="dark"] .ctx-item.danger{ color:#ff7a6b; }
   <div class="spacer"></div>
   <button class="tb-btn" id="notesToggle" hidden>Notizen</button>
   <button class="tb-btn" id="replayReveal" title="Aktivierungs-Animation abspielen">⟲ Reveal</button>
-  <button class="tb-btn" id="openPanel">✦ Design</button>
+  <button class="tb-btn" id="openPanel">✦ Einstellungen</button>
 </header>
 
 <!-- ── content stage ─────────────────────────────────────────────────── -->
 <div class="stage">
   <aside class="pin-rail empty" id="pinRail" aria-label="Angeheftete Abbildungen"></aside>
-  <main class="reader reveal" id="reader" data-align="left"></main>
+  <main class="reader reveal" id="reader" data-align="justify"></main>
   <aside class="note-gutter" id="noteGutter" aria-label="Randnotizen"></aside>
 </div>
 
@@ -571,9 +573,9 @@ body[data-bg="dark"] .ctx-item.danger{ color:#ff7a6b; }
 
 <!-- ── settings panel ────────────────────────────────────────────────── -->
 <div class="backdrop" id="backdrop"></div>
-<aside class="panel" id="panel" aria-label="Design-Einstellungen">
+<aside class="panel" id="panel" aria-label="Einstellungen">
   <div class="panel-head">
-    <h2>Design</h2><span class="spacer"></span>
+    <h2>Einstellungen</h2><span class="spacer"></span>
     <button class="panel-close" id="closePanel" aria-label="Schließen">✕</button>
   </div>
   <div class="panel-body">
@@ -638,8 +640,8 @@ body[data-bg="dark"] .ctx-item.danger{ color:#ff7a6b; }
       <div class="field">
         <div class="f-row"><label>Textsatz</label></div>
         <div class="seg" id="alignSeg">
-          <button data-v="left" aria-pressed="true">Linksbündig</button>
-          <button data-v="justify" aria-pressed="false">Blocksatz</button>
+          <button data-v="left" aria-pressed="false">Linksbündig</button>
+          <button data-v="justify" aria-pressed="true">Blocksatz</button>
         </div>
       </div>
     </div>
@@ -660,7 +662,8 @@ body[data-bg="dark"] .ctx-item.danger{ color:#ff7a6b; }
       <div class="field">
         <div class="f-row"><label>Hintergrund</label></div>
         <div class="seg" id="bgSeg">
-          <button data-v="paper" aria-pressed="true">Papier</button>
+          <button data-v="neutral" aria-pressed="true">Neutral</button>
+          <button data-v="paper" aria-pressed="false">Papier</button>
           <button data-v="white" aria-pressed="false">Weiß</button>
           <button data-v="sepia" aria-pressed="false">Sepia</button>
           <button data-v="dark" aria-pressed="false">Dunkel</button>
@@ -853,8 +856,8 @@ const NOTE_FONTS = {
 };
 const DEFAULTS = {
   proseFont:'eb', labelFont:'inter-label', noteFont:'inter', fs:19, lh:1.68,
-  measure:680, gap:1.0, align:'left', accent:'#0e8373',
-  bg:'paper', hidedeco:true, frame:'hairline', motion:true,
+  measure:680, gap:1.0, align:'justify', accent:'#0e8373',
+  bg:'neutral', hidedeco:true, frame:'hairline', motion:true,
 };
 const LS_SET='physio.reskin.settings', LS_HL='physio.reskin.highlights';
 let S = load(LS_SET, DEFAULTS);
@@ -1312,9 +1315,24 @@ document.addEventListener('mousedown', e=>{
 window.addEventListener('scroll', ()=>closeCtx(), {passive:true});
 window.addEventListener('resize', ()=>{ clearTimeout(window._rz); window._rz=setTimeout(layoutNotes,120); });
 
-/* notes drawer toggle (narrow screens) */
-q('#notesToggle').onclick=()=>document.body.classList.toggle('notes-open');
-function updateNotesToggle(){ const on = window.matchMedia('(max-width:1180px)').matches && HLS.some(h=>h.note&&h.note.trim()); q('#notesToggle').hidden = !on; }
+/* notes drawer toggle (narrow screens) — the topbar sits above the drawer,
+   so this button stays clickable to close it again */
+q('#notesToggle').onclick=()=>{
+  const open=document.body.classList.toggle('notes-open');
+  const btn=q('#notesToggle');
+  btn.classList.toggle('active', open);
+  btn.textContent = open ? '✕ Notizen' : 'Notizen';
+};
+function updateNotesToggle(){
+  const on = window.matchMedia('(max-width:1180px)').matches && HLS.some(h=>h.note&&h.note.trim());
+  const btn=q('#notesToggle');
+  btn.hidden = !on;
+  if(!on && document.body.classList.contains('notes-open')){   // drawer no longer reachable → close & reset
+    document.body.classList.remove('notes-open');
+    btn.classList.remove('active');
+    btn.textContent='Notizen';
+  }
+}
 window.addEventListener('resize', updateNotesToggle);
 
 /* onboarding toast — once */
