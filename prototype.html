@@ -1,0 +1,1350 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>physiologie · reskin — Prototyp</title>
+
+<!-- ── Web fonts ─────────────────────────────────────────────────────────
+     Prose serif favourites (EB Garamond) + sans options via Google Fonts,
+     Computer Modern (CMU Serif / Typewriter) via jsDelivr. These load fine
+     from a local file:// page in Chrome. In the real extension they'll be
+     bundled so nothing hits the network. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Inter:wght@400;500;600&family=Source+Sans+3:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/computer-modern@0.1.2/cmu-serif.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/computer-modern@0.1.2/cmu-typewriter-text.css">
+
+<style>
+/* ══════════════════════════════════════════════════════════════════════
+   physiologie · reskin — prototype stylesheet
+   Design language borrowed from makingsoftware.com:
+     · warm off-white "paper", near-black ink
+     · a Garamond-class serif for prose + a retro monospace for labels
+     · one restrained accent (#0e8373), used as line/tint, never as fill
+     · a narrow reading measure with generous vertical rhythm
+   Everything visual is driven by CSS custom properties so the settings
+   panel can retune the whole page live.
+   ══════════════════════════════════════════════════════════════════════ */
+
+:root{
+  --accent:#0e8373;
+  --paper:#faf8f3;
+  --ink:#20262a;
+  --ink-soft:#5d6b6a;
+  --measure:680px;
+  --fs:19px;
+  --lh:1.68;
+  --gap:1.0em;
+  --font-prose:'EB Garamond', Georgia, serif;
+  --font-label:'Inter', system-ui, sans-serif;
+  --font-note:'Inter', system-ui, sans-serif;
+
+  /* derived */
+  --hair: color-mix(in srgb, var(--ink) 13%, transparent);
+  --hair-soft: color-mix(in srgb, var(--ink) 8%, transparent);
+  --accent-tint: color-mix(in srgb, var(--accent) 10%, transparent);
+  --accent-line: color-mix(in srgb, var(--accent) 40%, transparent);
+  --accent-ink: color-mix(in srgb, var(--accent) 82%, var(--ink));
+  --panel-bg: color-mix(in srgb, var(--paper) 78%, #fff);
+  --shadow: 0 1px 2px rgba(20,25,25,.05), 0 8px 24px -14px rgba(20,25,25,.28);
+  --ease: cubic-bezier(.22,.61,.36,1);
+}
+
+/* ── background variants ───────────────────────────────────────────── */
+body[data-bg="paper"]{ --paper:#faf8f3; --ink:#20262a; --ink-soft:#5d6b6a; }
+body[data-bg="white"]{ --paper:#ffffff; --ink:#191c1e; --ink-soft:#5a6362; }
+body[data-bg="sepia"]{ --paper:#f3ead6; --ink:#3b3225; --ink-soft:#6f6249; }
+body[data-bg="dark"]{
+  --paper:#17140f; --ink:#eee7db; --ink-soft:#9a9384;
+  --accent: color-mix(in srgb, #0e8373 82%, white);
+  --hair: color-mix(in srgb, var(--ink) 18%, transparent);
+  --hair-soft: color-mix(in srgb, var(--ink) 10%, transparent);
+  --panel-bg: color-mix(in srgb, var(--paper) 82%, #000);
+  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+}
+
+*{ box-sizing:border-box; }
+html{ -webkit-text-size-adjust:100%; }
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:var(--font-prose);
+  font-size:var(--fs);
+  line-height:var(--lh);
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  transition:background .5s var(--ease), color .5s var(--ease);
+  overflow-x:hidden;
+}
+body[data-motion="0"] *{ animation:none !important; transition:none !important; }
+
+/* ── top bar ───────────────────────────────────────────────────────── */
+.topbar{
+  position:sticky; top:0; z-index:40;
+  display:flex; align-items:center; gap:.75rem;
+  padding:.7rem clamp(1rem,4vw,2rem);
+  background:color-mix(in srgb, var(--paper) 84%, transparent);
+  backdrop-filter:saturate(1.1) blur(8px);
+  border-bottom:1px solid var(--hair-soft);
+}
+.brand{
+  font-family:var(--font-label);
+  font-size:.72rem; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink); display:flex; align-items:center; gap:.55rem;
+}
+.brand b{ font-weight:700; }
+.brand .sub{ color:var(--ink-soft); }
+.topbar .spacer{ flex:1; }
+.topbar .gap-sm{ width:.1rem; }
+.tb-btn{
+  font-family:var(--font-label); font-size:.68rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-soft); background:transparent; border:1px solid var(--hair);
+  border-radius:999px; padding:.42rem .8rem; cursor:pointer; transition:.2s var(--ease);
+  display:inline-flex; align-items:center; gap:.4rem;
+}
+.tb-btn:hover{ color:var(--ink); border-color:var(--accent-line); background:var(--accent-tint); }
+
+/* ── layout: [pin rail] [reader] [note gutter], centred ────────────── */
+.stage{
+  display:grid;
+  grid-template-columns: minmax(0,1fr) var(--measure) minmax(0,1fr);
+  align-items:start;
+  column-gap:0;
+  padding:clamp(2rem,6vh,4.5rem) 0 40vh;
+}
+.reader{ grid-column:2; padding:0 1.25rem; position:relative; }
+.pin-rail{ grid-column:1; position:sticky; top:5rem;
+  padding:0 1.1rem 0 clamp(1rem,3vw,2rem); }   /* fills the left margin */
+.note-gutter{ grid-column:3; position:relative; justify-self:start;
+  width:min(250px, 100%); padding:0 clamp(1rem,3vw,2rem) 0 1.1rem; }
+
+/* ── typography inside the reader ──────────────────────────────────── */
+.kicker{
+  font-family:var(--font-label); font-size:.7rem; letter-spacing:.18em;
+  text-transform:uppercase; color:var(--accent-ink); margin:0 0 .9rem;
+}
+.reader h1{
+  font-weight:500; font-size:2.05em; line-height:1.16; letter-spacing:-.006em;
+  margin:.1em 0 .35em; text-wrap:balance;
+}
+.reader h2{
+  font-weight:500; font-size:1.42em; line-height:1.24; letter-spacing:-.004em;
+  margin:2.2em 0 .55em; text-wrap:balance;
+}
+.reader h2::before{
+  content:""; display:block; width:2.2rem; height:2px; margin-bottom:.9rem;
+  background:var(--accent); opacity:.85; border-radius:2px;
+}
+.reader h3{
+  font-weight:600; font-size:1.05em; margin:1.7em 0 .1em;
+}
+/* run-in heads (Zytoplasma / Zytosol …) sit tight to their definition */
+.reader h3 + p{ margin-top:.15em; }
+.byline{
+  font-family:var(--font-label); font-size:.72rem; letter-spacing:.04em;
+  color:var(--ink-soft); margin:0 0 2.2em; padding-bottom:1.4em;
+  border-bottom:1px solid var(--hair-soft);
+}
+.reader p{ margin:0 0 var(--gap); }
+.reader[data-align="justify"] p{ text-align:justify; hyphens:auto; }
+.reader p a, .reader .gloss a{ color:var(--accent-ink); text-decoration:none;
+  background-image:linear-gradient(var(--accent-line),var(--accent-line));
+  background-size:100% 1px; background-position:0 1.08em; background-repeat:no-repeat; }
+
+.lead{ font-size:1.08em; color:color-mix(in srgb,var(--ink) 92%, transparent); }
+
+/* etymology / glossary aside */
+.gloss{
+  margin:0 0 2em; padding:1.1em 1.3em; border-radius:12px;
+  background:color-mix(in srgb,var(--accent) 5%, var(--paper));
+  border:1px solid var(--hair-soft);
+  font-size:.92em; line-height:1.5; color:var(--ink-soft);
+}
+.gloss .gloss-title{
+  font-family:var(--font-label); font-size:.66rem; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--accent-ink); margin:0 0 .55em; display:block;
+}
+.gloss b{ color:var(--ink); font-weight:600; }
+
+/* ── figures ───────────────────────────────────────────────────────── */
+figure{ margin:2.3em 0; text-align:center; }
+figure img{
+  max-width:100%; height:auto; border-radius:8px; cursor:zoom-in;
+  transition:transform .35s var(--ease), box-shadow .35s var(--ease), filter .35s var(--ease);
+}
+body[data-figframe="hairline"] figure img{ border:1px solid var(--hair); box-shadow:0 1px 0 var(--hair-soft); }
+body[data-figframe="shadow"] figure img{ box-shadow:var(--shadow); }
+body[data-bg="dark"] figure img{ filter:brightness(.94) contrast(1.02); }
+figure img:hover{ transform:translateY(-2px); box-shadow:var(--shadow); }
+figcaption{
+  font-family:var(--font-label); font-size:.72rem; line-height:1.5; letter-spacing:.01em;
+  color:var(--ink-soft); margin-top:.85em; max-width:46ch; margin-left:auto; margin-right:auto;
+}
+figcaption .fignum{ color:var(--accent-ink); text-transform:uppercase; letter-spacing:.12em;
+  margin-right:.5em; font-size:.92em; }
+/* graceful fallback if a figure can't load (e.g. opened over file:// so the
+   http://physiologie.cc images are blocked as mixed content) */
+.img-ph{ display:flex; align-items:center; justify-content:center; min-height:120px; padding:2rem 1rem;
+  border:1px dashed var(--accent-line); border-radius:8px; background:var(--accent-tint);
+  font-family:var(--font-label); font-size:.72rem; letter-spacing:.06em; color:var(--ink-soft);
+  word-break:break-all; }
+.img-ph::before{ content:"◫  "; opacity:.6; }
+
+/* decorative junk from the original page (arrows, dots, pointing fingers) */
+.deco{ vertical-align:middle; margin:0 .15em; opacity:.9; }
+body[data-hidedeco="1"] .deco{ display:none !important; }
+.deco-note{ display:none; }
+body[data-hidedeco="0"] .deco-note{
+  display:block; font-family:var(--font-label); font-size:.64rem; letter-spacing:.1em;
+  text-transform:uppercase; color:#b06a2c; margin:.4em 0 1.4em;
+}
+
+/* ── data tables ───────────────────────────────────────────────────── */
+.tbl{ margin:2.2em 0; }
+.tbl .tbl-title{
+  font-family:var(--font-label); font-size:.7rem; letter-spacing:.08em;
+  color:var(--ink-soft); margin:0 0 .7em; line-height:1.45;
+}
+table.data{ width:100%; border-collapse:collapse; font-size:.94em; }
+table.data th{
+  text-align:left; font-weight:600; font-family:var(--font-prose);
+  padding:.5em .7em; border-bottom:1.5px solid var(--accent);
+  color:var(--accent-ink); white-space:nowrap;
+}
+table.data td{ padding:.5em .7em; border-bottom:1px solid var(--hair-soft); vertical-align:top; }
+table.data tr:last-child td{ border-bottom:1px solid var(--hair); }
+table.data td:not(:first-child){ font-variant-numeric:tabular-nums; }
+table.data tr:hover td{ background:var(--accent-tint); }
+
+/* section divider */
+.rule{ border:0; text-align:center; margin:2.1em 0; }
+.rule::before{ content:"❋"; color:var(--accent); opacity:.5; font-size:.85em; }
+
+/* ── highlights ────────────────────────────────────────────────────── */
+mark.hl{ background:transparent; color:inherit; border-radius:2px; padding:.02em 0; cursor:pointer;
+  transition:background .15s var(--ease), box-shadow .18s var(--ease); }
+/* when its margin note is hovered, a highlight lights up so you can see the link */
+mark.hl.note-hover{ box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 34%, transparent);
+  background:color-mix(in srgb,var(--accent) 22%, transparent); border-radius:3px; }
+mark.hl[data-color="teal"]{ background:color-mix(in srgb,var(--accent) 20%, transparent); box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 14%, transparent); }
+mark.hl[data-color="amber"]{ background:rgba(240,180,40,.30); }
+mark.hl[data-color="rose"]{ background:rgba(224,92,120,.24); }
+mark.hl[data-color="underline"]{ background:linear-gradient(var(--accent-line),var(--accent-line)) no-repeat 0 1.02em / 100% 2px; }
+mark.hl.has-note{ box-shadow:0 1.4px 0 var(--accent); }
+
+/* reveal-on-scroll */
+.reveal{ opacity:0; transform:translateY(14px); }
+.reveal.in{ opacity:1; transform:none; transition:opacity .7s var(--ease), transform .7s var(--ease); }
+body[data-motion="0"] .reveal{ opacity:1; transform:none; }
+@media (prefers-reduced-motion: reduce){ .reveal{ opacity:1; transform:none; } }
+
+/* ── selection highlight popover ───────────────────────────────────── */
+.hl-pop{
+  position:absolute; z-index:60; display:none; align-items:center; gap:.15rem;
+  padding:.32rem .4rem; border-radius:999px; background:var(--panel-bg);
+  border:1px solid var(--hair); box-shadow:var(--shadow);
+  transform:translate(-50%,-120%) scale(.96); opacity:0;
+  transition:opacity .16s var(--ease), transform .16s var(--ease);
+}
+.hl-pop.show{ display:flex; opacity:1; transform:translate(-50%,-115%) scale(1); }
+.hl-pop .sw{ width:1.15rem; height:1.15rem; border-radius:50%; border:1px solid var(--hair); cursor:pointer; transition:transform .15s var(--ease); }
+.hl-pop .sw:hover{ transform:scale(1.14); }
+.hl-pop .sw[data-color="teal"]{ background:var(--accent); }
+.hl-pop .sw[data-color="amber"]{ background:rgb(240,180,40); }
+.hl-pop .sw[data-color="rose"]{ background:rgb(224,92,120); }
+.hl-pop .sw[data-color="underline"]{ background:linear-gradient(transparent 55%, var(--accent) 55%, var(--accent) 78%, transparent 78%); }
+.hl-pop .divider{ width:1px; height:1.1rem; background:var(--hair); margin:0 .2rem; }
+.hl-pop .act{ font-family:var(--font-label); font-size:.6rem; letter-spacing:.08em; text-transform:uppercase;
+  border:0; background:transparent; color:var(--ink-soft); cursor:pointer; padding:.25rem .35rem; border-radius:6px; }
+.hl-pop .act:hover{ color:var(--ink); background:var(--accent-tint); }
+
+/* ── margin notes ──────────────────────────────────────────────────── */
+.note{
+  position:absolute; left:0; width:100%;
+  background:color-mix(in srgb,var(--accent) 4%, var(--paper));
+  border:1px solid var(--hair);
+  border-radius:10px; padding:.55rem .65rem;
+  box-shadow:var(--shadow);
+  transition:top .35s var(--ease), opacity .3s var(--ease), transform .3s var(--ease);
+  animation:noteIn .35s var(--ease);
+}
+@keyframes noteIn{ from{ opacity:0; transform:translateX(-8px);} to{ opacity:1; transform:none; } }
+.note textarea{
+  width:100%; border:0; resize:none; background:transparent; color:var(--ink);
+  font-family:var(--font-note); font-size:.82rem; line-height:1.45; outline:none;
+  min-height:1.4em; overflow:hidden;
+}
+.note.hovered{ border-color:var(--accent-line); }
+.note textarea::placeholder{ color:var(--ink-soft); opacity:.7; }
+.note .note-meta{ display:flex; justify-content:space-between; align-items:center; margin-top:.3rem; }
+.note .note-tag{ font-family:var(--font-label); font-size:.56rem; letter-spacing:.12em; text-transform:uppercase; color:var(--accent-ink); }
+.note .note-del{ border:0; background:transparent; color:var(--ink-soft); cursor:pointer; font-size:.7rem; padding:0 .2rem; }
+.note .note-del:hover{ color:rgb(200,70,70); }
+.note-gutter::before{
+  content:"Notizen"; display:block; position:sticky; top:5rem;
+  font-family:var(--font-label); font-size:.62rem; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--ink-soft); opacity:.55; margin-bottom:1rem;
+}
+.note-gutter:empty::before, .note-gutter.has-notes::before{ }
+
+/* ── pin rail (figures docked to the side) ─────────────────────────── */
+.pin{
+  position:relative; margin-bottom:1rem; border:1px solid var(--hair); border-radius:10px; overflow:hidden;
+  background:var(--panel-bg); box-shadow:var(--shadow); animation:pinIn .4s var(--ease);
+  width:min(260px, 100%); max-width:100%; margin-left:auto;   /* right-aligned; grows leftward into the margin */
+}
+@keyframes pinIn{ from{ opacity:0; transform:translateX(12px) scale(.97);} to{ opacity:1; transform:none; } }
+.pin img{ width:100%; display:block; cursor:zoom-in; }
+.pin .pin-bar{ display:flex; align-items:center; gap:.4rem; padding:.35rem .5rem; border-top:1px solid var(--hair-soft); }
+.pin .pin-cap{ flex:1; font-family:var(--font-label); font-size:.6rem; line-height:1.3; color:var(--ink-soft);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pin .pin-x{ border:0; background:transparent; color:var(--ink-soft); cursor:pointer; font-size:.85rem; padding:0 .2rem; }
+.pin .pin-x:hover{ color:var(--ink); }
+
+/* ── lightbox ──────────────────────────────────────────────────────── */
+.lightbox{
+  position:fixed; inset:0; z-index:80; display:none; place-items:center;
+  background:color-mix(in srgb, #0b0f0e 78%, transparent);
+  backdrop-filter:blur(3px); padding:3vh 3vw;
+}
+.lightbox.show{ display:grid; animation:lbIn .25s var(--ease); }
+@keyframes lbIn{ from{ opacity:0; } to{ opacity:1; } }
+.lightbox figure{ margin:0; max-width:min(1100px,92vw); }
+.lightbox img{ max-width:100%; max-height:82vh; border-radius:10px; box-shadow:0 30px 80px -20px rgba(0,0,0,.7);
+  transform-origin:center center; will-change:transform; cursor:zoom-in; touch-action:none; }
+.lightbox img.zoomed{ cursor:grab; }
+.lightbox img.grabbing{ cursor:grabbing; }
+.lb-zoom{ position:absolute; bottom:4vh; left:50%; transform:translateX(-50%); display:flex; align-items:center; gap:.15rem;
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.22); border-radius:999px; padding:.22rem; backdrop-filter:blur(6px); }
+.lb-zoom button{ font-family:var(--font-label); font-size:.74rem; color:#ece7db; background:transparent; border:0; border-radius:999px;
+  padding:.35rem .6rem; cursor:pointer; min-width:2rem; transition:.15s var(--ease); }
+.lb-zoom button:hover{ background:rgba(255,255,255,.15); }
+#lbZoomPct{ min-width:3.6rem; font-variant-numeric:tabular-nums; letter-spacing:.02em; }
+@keyframes lbZoom{ from{ transform:scale(.94); opacity:.6;} to{ transform:none; opacity:1; } }
+.lightbox figcaption{ color:#d9d4c8; max-width:60ch; margin-top:1rem; }
+.lb-tools{ position:absolute; top:4vh; right:4vw; display:flex; gap:.5rem; }
+.lb-tools button{
+  font-family:var(--font-label); font-size:.66rem; letter-spacing:.08em; text-transform:uppercase;
+  color:#ece7db; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.22);
+  border-radius:999px; padding:.5rem .9rem; cursor:pointer; transition:.2s var(--ease); }
+.lb-tools button:hover{ background:rgba(255,255,255,.16); }
+
+/* ── settings panel ────────────────────────────────────────────────── */
+.panel{
+  position:fixed; top:0; right:0; z-index:70; height:100dvh; width:min(360px,92vw);
+  background:var(--panel-bg); border-left:1px solid var(--hair);
+  box-shadow:-16px 0 40px -24px rgba(20,25,25,.4);
+  transform:translateX(100%); transition:transform .4s var(--ease);
+  display:flex; flex-direction:column;
+}
+.panel.open{ transform:none; }
+.panel-head{ display:flex; align-items:center; padding:1.1rem 1.25rem; border-bottom:1px solid var(--hair-soft); }
+.panel-head h2{ margin:0; font-family:var(--font-label); font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; font-weight:700; }
+.panel-head .spacer{ flex:1; }
+.panel-close{ border:0; background:transparent; color:var(--ink-soft); font-size:1.1rem; cursor:pointer; }
+.panel-body{ overflow-y:auto; padding:1.1rem 1.25rem 3rem; }
+.group{ margin-bottom:1.7rem; }
+.group > .g-label{
+  font-family:var(--font-label); font-size:.62rem; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--ink-soft); margin-bottom:.75rem; display:block;
+}
+.field{ margin-bottom:.95rem; }
+.field .f-row{ display:flex; justify-content:space-between; align-items:baseline; margin-bottom:.35rem; }
+.field label{ font-size:.82rem; color:var(--ink); font-family:var(--font-prose); }
+.field .val{ font-family:var(--font-label); font-size:.68rem; color:var(--ink-soft); }
+select, input[type="range"]{ width:100%; }
+select{
+  font-family:var(--font-prose); font-size:.85rem; color:var(--ink);
+  background:var(--paper); border:1px solid var(--hair); border-radius:8px; padding:.45rem .55rem; cursor:pointer;
+}
+input[type="range"]{ -webkit-appearance:none; appearance:none; height:3px; border-radius:3px;
+  background:var(--hair); outline:none; margin:.5rem 0; }
+input[type="range"]::-webkit-slider-thumb{ -webkit-appearance:none; width:15px; height:15px; border-radius:50%;
+  background:var(--accent); cursor:pointer; box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 18%, transparent); transition:.15s; }
+input[type="range"]::-webkit-slider-thumb:hover{ transform:scale(1.12); }
+
+/* segmented control */
+.seg{ display:flex; gap:.3rem; flex-wrap:wrap; }
+.seg button{
+  flex:1 1 auto; font-family:var(--font-label); font-size:.62rem; letter-spacing:.05em; text-transform:uppercase;
+  padding:.45rem .3rem; border:1px solid var(--hair); border-radius:7px; background:var(--paper);
+  color:var(--ink-soft); cursor:pointer; transition:.18s var(--ease); white-space:nowrap;
+}
+.seg button:hover{ color:var(--ink); }
+.seg button[aria-pressed="true"]{ background:var(--accent-tint); border-color:var(--accent-line); color:var(--accent-ink); }
+
+/* swatches */
+.swatches{ display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+.swatches .cs{ width:1.5rem; height:1.5rem; border-radius:50%; cursor:pointer; border:2px solid transparent;
+  box-shadow:0 0 0 1px var(--hair); transition:transform .15s var(--ease); }
+.swatches .cs:hover{ transform:scale(1.12); }
+.swatches .cs.sel{ border-color:var(--paper); box-shadow:0 0 0 2px var(--ink); }
+.swatches input[type="color"]{ width:1.7rem; height:1.7rem; padding:0; border:1px solid var(--hair); border-radius:8px; background:none; cursor:pointer; }
+
+/* toggle */
+.toggle{ display:flex; align-items:center; justify-content:space-between; }
+.toggle label{ font-size:.82rem; }
+.sw-toggle{ position:relative; width:38px; height:22px; border-radius:999px; background:var(--hair);
+  border:0; cursor:pointer; transition:.2s var(--ease); flex:none; }
+.sw-toggle::after{ content:""; position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%;
+  background:var(--paper); box-shadow:0 1px 3px rgba(0,0,0,.25); transition:.2s var(--ease); }
+.sw-toggle[aria-pressed="true"]{ background:var(--accent); }
+.sw-toggle[aria-pressed="true"]::after{ transform:translateX(16px); }
+
+.panel-foot{ margin-top:.5rem; padding-top:1.2rem; border-top:1px solid var(--hair-soft); }
+.reset{ font-family:var(--font-label); font-size:.66rem; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--ink-soft); background:transparent; border:1px solid var(--hair); border-radius:999px; padding:.5rem .9rem; cursor:pointer; }
+.reset:hover{ color:var(--ink); border-color:var(--accent-line); }
+.saved-note{ font-family:var(--font-label); font-size:.6rem; letter-spacing:.06em; color:var(--ink-soft); margin-top:.9rem; opacity:.7; }
+
+/* onboarding toast */
+.toast{
+  position:fixed; left:50%; bottom:1.4rem; transform:translateX(-50%) translateY(140%);
+  z-index:65; max-width:min(560px,92vw);
+  background:var(--panel-bg); border:1px solid var(--hair); border-radius:12px; box-shadow:var(--shadow);
+  padding:.85rem 1.1rem; display:flex; gap:.9rem; align-items:center;
+  transition:transform .5s var(--ease);
+}
+.toast.show{ transform:translateX(-50%) translateY(0); }
+.toast .t-txt{ font-size:.85rem; line-height:1.45; color:var(--ink); }
+.toast .t-txt b{ font-weight:600; }
+.toast .t-txt .k{ font-family:var(--font-label); font-size:.78em; color:var(--accent-ink); }
+.toast .t-x{ border:0; background:transparent; color:var(--ink-soft); cursor:pointer; font-size:1rem; }
+
+/* backdrop for panel on small screens */
+.backdrop{ position:fixed; inset:0; z-index:60; background:rgba(0,0,0,.25); opacity:0; pointer-events:none; transition:.3s; }
+.backdrop.show{ opacity:1; pointer-events:auto; }
+
+/* ── highlight context menu (shadcn-style) ─────────────────────────── */
+.ctx-menu{
+  position:fixed; z-index:85; min-width:196px; padding:.35rem;
+  background:var(--panel-bg); border:1px solid var(--hair); border-radius:10px; box-shadow:var(--shadow);
+  opacity:0; transform:scale(.96); transform-origin:top left; pointer-events:none;
+  transition:opacity .12s var(--ease), transform .12s var(--ease);
+}
+.ctx-menu.show{ opacity:1; transform:scale(1); pointer-events:auto; }
+.ctx-label{ font-family:var(--font-label); font-size:.6rem; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--ink-soft); padding:.3rem .5rem .1rem; }
+.ctx-colors{ display:flex; gap:.45rem; padding:.4rem .5rem; }
+.ctx-sw{ width:1.2rem; height:1.2rem; border-radius:50%; cursor:pointer; box-shadow:0 0 0 1px var(--hair);
+  transition:transform .12s var(--ease); }
+.ctx-sw:hover{ transform:scale(1.16); }
+.ctx-sw.sel{ box-shadow:0 0 0 2px var(--ink); }
+.ctx-sw[data-color="teal"]{ background:var(--accent); }
+.ctx-sw[data-color="amber"]{ background:rgb(240,180,40); }
+.ctx-sw[data-color="rose"]{ background:rgb(224,92,120); }
+.ctx-sw[data-color="underline"]{ background:linear-gradient(transparent 55%, var(--accent) 55%, var(--accent) 80%, transparent 80%); }
+.ctx-sep{ height:1px; background:var(--hair-soft); margin:.3rem .3rem; }
+.ctx-item{ display:flex; align-items:center; gap:.55rem; width:100%; text-align:left; border:0; background:transparent;
+  cursor:pointer; font-family:var(--font-prose); font-size:.88rem; color:var(--ink); padding:.45rem .55rem; border-radius:7px; }
+.ctx-item:hover{ background:var(--accent-tint); }
+.ctx-item.danger{ color:#c0392b; }
+body[data-bg="dark"] .ctx-item.danger{ color:#ff7a6b; }
+.ctx-item.danger:hover{ background:color-mix(in srgb,#c0392b 13%, transparent); }
+
+/* ── confirm dialog (shadcn alert-dialog style) ────────────────────── */
+.confirm-back{ position:fixed; inset:0; z-index:100; display:grid; place-items:center;
+  background:rgba(10,14,13,.42); backdrop-filter:blur(2px);
+  opacity:0; pointer-events:none; transition:opacity .18s var(--ease); }
+.confirm-back.show{ opacity:1; pointer-events:auto; }
+.confirm{ width:min(360px,92vw); background:var(--panel-bg); border:1px solid var(--hair); border-radius:14px;
+  box-shadow:var(--shadow); padding:1.3rem 1.4rem; transform:scale(.95) translateY(6px); transition:transform .18s var(--ease); }
+.confirm-back.show .confirm{ transform:none; }
+.confirm h3{ margin:0 0 .45rem; font-family:var(--font-prose); font-weight:600; font-size:1.1rem; color:var(--ink); }
+.confirm p{ margin:0 0 1.2rem; font-size:.86rem; color:var(--ink-soft); line-height:1.5; }
+.confirm .row{ display:flex; justify-content:flex-end; gap:.6rem; }
+.confirm button{ font-family:var(--font-label); font-size:.66rem; letter-spacing:.06em; text-transform:uppercase;
+  border-radius:9px; padding:.55rem 1rem; cursor:pointer; border:1px solid var(--hair); background:var(--paper); color:var(--ink);
+  transition:.15s var(--ease); }
+.confirm button.cancel:hover{ border-color:var(--accent-line); background:var(--accent-tint); }
+.confirm button.danger{ background:#c0392b; border-color:#c0392b; color:#fff; }
+.confirm button.danger:hover{ filter:brightness(1.06); }
+
+/* ── pin rail: resize, reorder by drag, collapse, unpin-all ────────── */
+.pin-head{ display:flex; align-items:center; gap:.5rem; width:100%; margin-bottom:.9rem; }
+.pin-head-title{ flex:1; font-family:var(--font-label); font-size:.62rem; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-soft); text-align:left; }
+.pin-unpin-all{ font-family:var(--font-label); font-size:.56rem; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--ink-soft); background:transparent; border:1px solid var(--hair); border-radius:999px; padding:.28rem .6rem;
+  cursor:pointer; transition:.18s var(--ease); white-space:nowrap; }
+.pin-unpin-all:hover{ color:var(--ink); border-color:var(--accent-line); background:var(--accent-tint); }
+.pin.dragging{ opacity:.4; }
+.pin-grip{ cursor:grab; color:var(--ink-soft); font-size:.82rem; line-height:1; opacity:.55; user-select:none; }
+.pin-grip:hover{ opacity:1; }
+.pin.dragging .pin-grip{ cursor:grabbing; }
+.pin-zoom, .pin-collapse{ border:0; background:transparent; color:var(--ink-soft); cursor:pointer; line-height:1; padding:0 .18rem; }
+.pin-zoom{ font-family:var(--font-label); font-size:.9rem; }
+.pin-collapse{ font-size:.72rem; }
+.pin-zoom:hover, .pin-collapse:hover{ color:var(--ink); }
+.pin-zoom:disabled{ opacity:.3; cursor:default; }
+.pin.collapsed .pin-zoom{ display:none; }
+.pin.collapsed img{ display:none; }
+.pin.collapsed .pin-bar{ border-top:0; }
+.pin.collapsed .pin-cap{ white-space:normal; overflow:visible; text-overflow:clip; }
+
+/* ── undo toasts (sonner-inspired) ─────────────────────────────────── */
+.toaster{ position:fixed; right:1.2rem; bottom:1.2rem; z-index:92; display:flex; flex-direction:column;
+  gap:.55rem; align-items:flex-end; pointer-events:none; }
+.sonner{ pointer-events:auto; display:flex; align-items:center; gap:.9rem; min-width:230px; max-width:340px;
+  background:var(--panel-bg); border:1px solid var(--hair); border-radius:12px; box-shadow:var(--shadow);
+  padding:.7rem .8rem .7rem .95rem; transform:translateY(14px) scale(.96); opacity:0;
+  transition:transform .32s var(--ease), opacity .32s var(--ease); }
+.sonner.show{ transform:none; opacity:1; }
+.sonner.hide{ transform:translateY(10px) scale(.97); opacity:0; }
+.sonner-msg{ flex:1; font-family:var(--font-note); font-size:.82rem; color:var(--ink); line-height:1.35; }
+.sonner-action{ font-family:var(--font-label); font-size:.62rem; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--accent-ink); background:var(--accent-tint); border:1px solid var(--accent-line); border-radius:8px;
+  padding:.4rem .7rem; cursor:pointer; white-space:nowrap; transition:.15s var(--ease); }
+.sonner-action:hover{ background:color-mix(in srgb,var(--accent) 20%, transparent); }
+
+/* ── activation reveal — draws the page top→bottom ─────────────────── */
+.activate{ position:fixed; inset:0; z-index:95; background:var(--paper); pointer-events:none; display:none; }
+.activate.run{ display:block; animation:sweepCover 1.25s var(--ease) forwards; }
+.activate-line{ position:fixed; left:0; right:0; top:0; height:2px; z-index:96; pointer-events:none; display:none;
+  background:linear-gradient(90deg, transparent, var(--accent) 18%, var(--accent) 82%, transparent);
+  box-shadow:0 0 18px 3px color-mix(in srgb,var(--accent) 60%, transparent); }
+.activate-line.run{ display:block; animation:sweepLine 1.25s var(--ease) forwards; }
+@keyframes sweepCover{ from{ clip-path:inset(0 0 0 0); } to{ clip-path:inset(100% 0 0 0); } }
+@keyframes sweepLine{ 0%{ transform:translateY(0); opacity:1; } 90%{ opacity:1; } 100%{ transform:translateY(100vh); opacity:0; } }
+@media (prefers-reduced-motion: reduce){ .activate,.activate-line{ display:none !important; } }
+
+/* responsive: collapse side rails, keep it readable */
+@media (max-width:1180px){
+  .stage{ grid-template-columns: 0 minmax(0,var(--measure)) 0; justify-content:center; }
+  .pin-rail{ display:none; }
+  .note-gutter{ position:fixed; right:0; top:0; height:100dvh; width:min(300px,86vw); z-index:55;
+    background:var(--panel-bg); border-left:1px solid var(--hair); padding:4rem 1rem 2rem; overflow-y:auto;
+    transform:translateX(100%); transition:transform .35s var(--ease); }
+  body.notes-open .note-gutter{ transform:none; }
+  .note{ position:relative !important; top:auto !important; margin-bottom:.8rem; }
+}
+</style>
+</head>
+<body data-bg="paper" data-hidedeco="1" data-figframe="hairline" data-motion="1">
+
+<!-- ── activation reveal (draws the page top→bottom) ─────────────────── -->
+<div class="activate" id="activate"></div>
+<div class="activate-line" id="activateLine"></div>
+
+<!-- ── top bar ───────────────────────────────────────────────────────── -->
+<header class="topbar">
+  <div class="brand"><b>physiologie</b><span class="sub">· reskin — Prototyp</span></div>
+  <div class="spacer"></div>
+  <button class="tb-btn" id="notesToggle" hidden>Notizen</button>
+  <button class="tb-btn" id="replayReveal" title="Aktivierungs-Animation abspielen">⟲ Reveal</button>
+  <button class="tb-btn" id="openPanel">✦ Design</button>
+</header>
+
+<!-- ── content stage ─────────────────────────────────────────────────── -->
+<div class="stage">
+  <aside class="pin-rail empty" id="pinRail" aria-label="Angeheftete Abbildungen"></aside>
+  <main class="reader reveal" id="reader" data-align="left"></main>
+  <aside class="note-gutter" id="noteGutter" aria-label="Randnotizen"></aside>
+</div>
+
+<!-- ── selection popover ─────────────────────────────────────────────── -->
+<div class="hl-pop" id="hlPop">
+  <span class="sw" data-color="teal" title="Türkis"></span>
+  <span class="sw" data-color="amber" title="Gelb"></span>
+  <span class="sw" data-color="rose" title="Rosa"></span>
+  <span class="sw" data-color="underline" title="Unterstreichen"></span>
+  <span class="divider"></span>
+  <button class="act" data-act="note">✎ Notiz</button>
+</div>
+
+<!-- ── lightbox ──────────────────────────────────────────────────────── -->
+<div class="lightbox" id="lightbox">
+  <div class="lb-tools">
+    <button id="lbPin">✚ An den Rand heften</button>
+    <button id="lbClose">✕ Schließen</button>
+  </div>
+  <figure><img id="lbImg" alt=""><figcaption id="lbCap"></figcaption></figure>
+  <div class="lb-zoom">
+    <button id="lbZoomOut" title="Verkleinern">−</button>
+    <button id="lbZoomPct" title="Zurücksetzen">100 %</button>
+    <button id="lbZoomIn" title="Vergrößern">+</button>
+  </div>
+</div>
+
+<!-- ── settings panel ────────────────────────────────────────────────── -->
+<div class="backdrop" id="backdrop"></div>
+<aside class="panel" id="panel" aria-label="Design-Einstellungen">
+  <div class="panel-head">
+    <h2>Design</h2><span class="spacer"></span>
+    <button class="panel-close" id="closePanel" aria-label="Schließen">✕</button>
+  </div>
+  <div class="panel-body">
+
+    <div class="group">
+      <span class="g-label">Schrift</span>
+      <div class="field">
+        <div class="f-row"><label for="proseFont">Lesefont</label></div>
+        <select id="proseFont">
+          <optgroup label="Serif">
+            <option value="eb">EB Garamond</option>
+            <option value="cmu">Computer Modern (CMU Serif)</option>
+            <option value="source-serif">Source Serif 4</option>
+            <option value="newsreader">Newsreader</option>
+          </optgroup>
+          <optgroup label="Sans-serif">
+            <option value="inter">Inter</option>
+            <option value="source-sans">Source Sans 3</option>
+            <option value="plex-sans">IBM Plex Sans</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="field">
+        <div class="f-row"><label for="labelFont">Label-/Bildtextfont</label></div>
+        <select id="labelFont">
+          <option value="inter-label">Inter</option>
+          <option value="space-mono">Space Mono</option>
+          <option value="plex-mono">IBM Plex Mono</option>
+          <option value="cmu-tt">CMU Typewriter</option>
+        </select>
+      </div>
+      <div class="field">
+        <div class="f-row"><label for="noteFont">Notizfont</label></div>
+        <select id="noteFont">
+          <option value="inter">Inter</option>
+          <option value="plex-sans">IBM Plex Sans</option>
+          <option value="source-sans">Source Sans 3</option>
+          <option value="eb">EB Garamond</option>
+          <option value="space-mono">Space Mono</option>
+        </select>
+      </div>
+      <div class="field">
+        <div class="f-row"><label for="fs">Schriftgröße</label><span class="val" id="fsVal">19px</span></div>
+        <input type="range" id="fs" min="16" max="24" step="1" value="19">
+      </div>
+      <div class="field">
+        <div class="f-row"><label for="lh">Zeilenhöhe</label><span class="val" id="lhVal">1.68</span></div>
+        <input type="range" id="lh" min="1.35" max="1.95" step="0.01" value="1.68">
+      </div>
+    </div>
+
+    <div class="group">
+      <span class="g-label">Layout</span>
+      <div class="field">
+        <div class="f-row"><label for="measure">Textbreite</label><span class="val" id="measureVal">680px</span></div>
+        <input type="range" id="measure" min="540" max="880" step="10" value="680">
+      </div>
+      <div class="field">
+        <div class="f-row"><label for="gap">Absatzabstand</label><span class="val" id="gapVal">1.00</span></div>
+        <input type="range" id="gap" min="0.5" max="1.8" step="0.05" value="1.0">
+      </div>
+      <div class="field">
+        <div class="f-row"><label>Textsatz</label></div>
+        <div class="seg" id="alignSeg">
+          <button data-v="left" aria-pressed="true">Linksbündig</button>
+          <button data-v="justify" aria-pressed="false">Blocksatz</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <span class="g-label">Farbe</span>
+      <div class="field">
+        <div class="f-row"><label>Akzentfarbe</label></div>
+        <div class="swatches" id="swatches">
+          <span class="cs" data-c="#0e8373" style="background:#0e8373" title="Physio-Türkis"></span>
+          <span class="cs" data-c="#3a6ea5" style="background:#3a6ea5" title="Blau"></span>
+          <span class="cs" data-c="#7048c4" style="background:#7048c4" title="Violett"></span>
+          <span class="cs" data-c="#b0562a" style="background:#b0562a" title="Terrakotta"></span>
+          <span class="cs" data-c="#5a7d3c" style="background:#5a7d3c" title="Moos"></span>
+          <input type="color" id="customColor" value="#0e8373" title="Eigene Farbe">
+        </div>
+      </div>
+      <div class="field">
+        <div class="f-row"><label>Hintergrund</label></div>
+        <div class="seg" id="bgSeg">
+          <button data-v="paper" aria-pressed="true">Papier</button>
+          <button data-v="white" aria-pressed="false">Weiß</button>
+          <button data-v="sepia" aria-pressed="false">Sepia</button>
+          <button data-v="dark" aria-pressed="false">Dunkel</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <span class="g-label">Bilder</span>
+      <div class="field toggle">
+        <label for="hidedeco">Dekobilder ausblenden</label>
+        <button class="sw-toggle" id="hidedeco" aria-pressed="true"></button>
+      </div>
+      <div class="field">
+        <div class="f-row"><label>Abbildungsrahmen</label></div>
+        <div class="seg" id="frameSeg">
+          <button data-v="hairline" aria-pressed="true">Haarlinie</button>
+          <button data-v="shadow" aria-pressed="false">Schatten</button>
+          <button data-v="none" aria-pressed="false">Ohne</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <span class="g-label">Bewegung</span>
+      <div class="field toggle">
+        <label for="motion">Animationen</label>
+        <button class="sw-toggle" id="motion" aria-pressed="true"></button>
+      </div>
+    </div>
+
+    <div class="panel-foot">
+      <button class="reset" id="resetBtn">↺ Zurücksetzen</button>
+      <div class="saved-note">Einstellungen &amp; Notizen werden lokal gespeichert.</div>
+    </div>
+  </div>
+</aside>
+
+<!-- ── onboarding toast ──────────────────────────────────────────────── -->
+<div class="toast" id="toast">
+  <div class="t-txt">
+    <b>Probier die Interaktionen:</b> Bild anklicken → vergrößern &amp; anheften ·
+    Text markieren → hervorheben oder <span class="k">✎ Notiz</span> · alles bleibt lokal gespeichert.
+  </div>
+  <button class="t-x" id="toastX" aria-label="Schließen">✕</button>
+</div>
+
+<!-- ── undo toaster (sonner-inspired) ────────────────────────────────── -->
+<div class="toaster" id="toaster" aria-live="polite"></div>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════════
+   1 · REAL CONTENT — extracted from physiologie.cc/I.1.htm
+   (Kapitel I · Membransysteme, Zellorganellen, Rezeptoren, Apoptose)
+   Prose, figures, glossary and both data tables are taken verbatim from
+   the live page; only obvious navigation noise was trimmed. Figures load
+   straight from physiologie.cc.
+   ══════════════════════════════════════════════════════════════════════ */
+const IMG = 'http://physiologie.cc/';
+const BLOCKS = [
+  {t:'kicker', x:'Kapitel I · Allgemeine Grundlagen, Physiologie der Zelle'},
+  {t:'h', lvl:1, x:'Membransysteme, Zellorganellen, Rezeptoren, Apoptose'},
+  {t:'byline', x:'Reise durch die Physiologie · © H. Hinghofer-Szalkay'},
+
+  {t:'gloss', title:'Wortherkunft', html:
+    '<b>Anion</b> ἀνά = hinauf, ἰόν = das Wandernde &nbsp;·&nbsp; ' +
+    '<b>Apoptose</b> ἀπό = ab-, πτῶσις = Fall &nbsp;·&nbsp; ' +
+    '<b>Diffusion</b> lat. diffundere = ausgießen &nbsp;·&nbsp; ' +
+    '<b>Endozytose</b> ἔνδον = innen, κύτος = Gefäß &nbsp;·&nbsp; ' +
+    '<b>Glykokalyx</b> γλῦκ = süß, κάλυξ = Hülse &nbsp;·&nbsp; ' +
+    '<b>Osmose</b> ὠσμός = Antrieb, Stoß &nbsp;·&nbsp; ' +
+    '<b>Rezeptor</b> lat. recipere = empfangen, aufnehmen'},
+
+  {t:'p', lead:true, x:'Kompartimentierung bedeutet Aufbau und Erhaltung definierter Funktionsräume im Körper. So kann die Zelle als Kompartiment gesehen werden: Die Zellmembran — sie besteht hauptsächlich aus Lipiden — trennt den intrazellulären vom extrazellulären Raum. Extra- und intrazelluläre gelöste Stoffe können meist nur über spezielle Mechanismen („Kanäle", Transporter, „Pumpen") durch die Lipidschichte der Membran treten. Der zelluläre Stoffwechsel läuft auf diese Weise geschützt vor unerwünschten Durchmischungseffekten ab; Konzentrationsgradienten entstehen und werden erhalten und treiben Diffusion und sekundäre Transportvorgänge an.'},
+
+  {t:'p', deco:['rechtspfeil.gif'], x:'Die Diffusion von Substanzen kann genützt werden, um Begleitstoffe „huckepack" mitzutransportieren (Symport, z. B. Glucose mit Natrium); oder sie werden gegeneinander über Membranproteine ausgetauscht (Antiport). Stoffe können auch unter Energieverbrauch (ATP) durch eine „Pumpe" (ATPase) gegen ihren Konzentrationsgradienten durch Membranen geschleust werden, z. B. Natrium und Kalium mittels der Na-K-Pumpe — Kalium in die und Natrium aus der Zelle.'},
+
+  {t:'p', deco:['vitru.jpg','yellowball.jpg'], x:'Die Zellmembran verfügt über Rezeptormoleküle: Diese binden Signalmoleküle (Hormone, Transmitter, …) und lösen sekundäre Vorgänge aus — Ionenfluss durch die Membran (z. B. Natriumeinstrom) oder intrazelluläre Sekundäreffekte. Steht das Überleben einer Zelle in Frage, kann ein geordneter Absterbeprozess (Apoptose) aktiviert werden; die Zellfragmente werden anschließend entsorgt und ihre chemischen Bestandteile wiederverwertet.'},
+
+  {t:'h', lvl:2, x:'Leben baut auf der Funktion von Zellen auf'},
+  {t:'p', x:'Jeder Zelltyp ist darauf eingestellt, bestimmte Eigenschaften aufzuweisen und Funktionen zu erfüllen — unter Verwendung bestimmter Teile der genetischen Information (das Genom ist allen kernhaltigen Zellen gemeinsam, seine Nutzungsbreite ist zellspezifisch). Alle Zellen nutzen Nährstoffe nach gemeinsamen Grundprinzipien (Energiegewinnung aus Kohlenhydraten, Fetten u. a.) und geben Produkte ihres Stoffwechsels an die extrazelluläre Flüssigkeit ab.'},
+
+  {t:'fig', src:'HP4_3-10.jpg', w:615, h:332, num:'Abb. 1', cap:'Verschiedene Zellgrößen. Nach einer Vorlage bei Silverthorn, Human Physiology — an integrated approach, 4th ed.'},
+
+  {t:'p', x:'Spermien sind 5 µm lang, Eizellen haben einen Durchmesser von etwa 100 µm, Neuronen besitzen einen Dendritenbaum von mehreren hundert µm Ausdehnung sowie Neuriten, die Aktionspotentiale über eine Distanz von einem Meter in einer Hundertstelsekunde übermitteln können.'},
+
+  {t:'p', x:'Eine erwachsene Person hat 30 bis 40 Billionen körpereigene Zellen — allein die Zahl der roten Blutkörperchen macht ~25 Billionen aus (~5 Millionen pro µl Blut). Jede Sekunde entstehen viele Millionen neu; die physiologische Lebensdauer reicht von wenigen Tagen (Epithel- und weiße Blutzellen) bis zu Jahrzehnten (Nervenzellen, die Information speichern und meist zeitlebens erhalten bleiben). Gehen Zellen zugrunde, werden ihre Komponenten wiederverwertet.'},
+
+  {t:'fig', src:'Grundschema.jpg', w:430, h:434, num:'Abb. 2', cap:'Zellen und Kreislauf. Modifiziert nach Mohrman & Heller, Cardiovascular Physiology, 8th ed.'},
+
+  {t:'p', x:'Zellen nehmen aus der extrazellulären Flüssigkeit (dem Interstitium) Aminosäuren, Zucker, Salze, Spurenelemente, Signalstoffe und Sauerstoff auf. Andere Stoffe — Substrate, Hormone, Transmitter, Kohlendioxid — werden an die extrazelluläre Flüssigkeit abgegeben. Zwischen Umwelt und Lungenbläschen erfolgt der Atemgasaustausch über Konvektion, zwischen Luft und Blut über Diffusion, zwischen Lunge und Kapillaren über Perfusion.'},
+
+  {t:'h', lvl:3, x:'Zytoplasma'},
+  {t:'p', x:'ist der gesamte Inhalt einer Zelle minus dem Zellkern (Erythrozyten sind kernlos und enthalten nur Zytoplasma).'},
+  {t:'h', lvl:3, x:'Zytosol'},
+  {t:'p', x:'ist die amorphe, gelartige intrazelluläre Masse des Zytoplasmas, in der Zellorganellen, Filamente, Mikrotubuli und sonstige korpuskuläre Einschlüsse suspendiert sind. Die dem Zytosol analoge Substanz im Zellkern heißt Karyoplasma.'},
+
+  {t:'rule'},
+
+  {t:'h', lvl:2, x:'Wie bewegen sich Moleküle und Ionen?'},
+  {t:'p', x:'Der Körper ist so strukturiert, dass bestimmte Funktionsräume (Kompartimente) für Reaktionen und Transport zur Verfügung stehen, die durch Grenzflächen (Zellmembranen, Gefäßwände u. a.) teilweise voneinander getrennt sind. Die Eigenschaften dieser Grenzflächen bestimmen die Möglichkeit des Stoffaustauschs über sie hinweg.'},
+
+  {t:'h', lvl:2, x:'Diffusion'},
+  {t:'p', x:'Liegt ein frei beweglicher Stoff an einer Stelle in höherer Konzentration vor als in seiner Umgebung, ist es wahrscheinlicher, dass sich seine Teilchen — im Rahmen der zufallsgesteuerten Brown’schen Molekularbewegung — von hier wegbewegen als in die Gegenrichtung (zunehmende Entropie → Zweiter Hauptsatz der Thermodynamik).'},
+
+  {t:'fig', src:'HP4_5-5.jpg', w:551, h:277, num:'Abb. 3', cap:'Diffusion. Nach einer Vorlage bei Silverthorn, Human Physiology, 4th ed.'},
+
+  {t:'table', title:'Mittlere Diffusionszeit von Glucosemolekülen — nach A. Einstein, 1905',
+    head:['Strecke','Zeit','In-vivo-Beispiel'],
+    rows:[
+      ['0,1 µm','0,000005 s','Spaltraum an der motorischen Endplatte'],
+      ['1 µm','0,0005 s','Kapillarwand'],
+      ['10 µm','0,05 s','Strecke Kapillare–Zelle'],
+      ['1 mm','~9 min','Arterienwand'],
+      ['1 cm','~15 h','Wand des linken Ventrikels'],
+    ]},
+
+  {t:'p', x:'Die Zeit, die ein Molekül für eine Diffusionsstrecke benötigt, wächst mit dem Quadrat der Distanz — deshalb ist Diffusion nur über kurze Strecken effizient. Wie leicht ein Stoff eine reine Lipid-Doppellamelle durchdringt, hängt von seiner Lipidlöslichkeit ab:'},
+
+  {t:'table', title:'Permeabilität einer reinen Lipid-Doppellamelle gegenüber gelösten Stoffen — nach Blaustein / Kao / Matteson, 3rd ed. 2019',
+    head:['Stoff','P (cm/s)','Zeitkonstante'],
+    rows:[
+      ['Wasser','10⁻⁴ – 10⁻³','0,5 – 5 s'],
+      ['Harnstoff','10⁻⁶','~8 min'],
+      ['Glucose, Aminosäuren','10⁻⁷','~1,4 h'],
+      ['Chloridionen','10⁻¹¹','~1,6 a'],
+      ['Natrium-, Kaliumionen','10⁻¹³','~160 a'],
+    ]},
+];
+
+/* ══════════════════════════════════════════════════════════════════════
+   2 · RENDER — turn the reading model into clean semantic HTML.
+   Every text-bearing block gets a stable data-b index so highlights and
+   notes can be re-anchored across reloads.
+   ══════════════════════════════════════════════════════════════════════ */
+const reader = document.getElementById('reader');
+let bCount = 0;
+const hlblock = (el)=>{ el.classList.add('hlblock'); el.dataset.b = bCount++; return el; };
+const decoImgs = (list)=> (list||[]).map(s=>`<img class="deco" src="${IMG}${s}" alt="" onerror="this.style.display='none'">`).join('');
+
+function render(){
+  bCount = 0;
+  let html = '';
+  BLOCKS.forEach((b)=>{
+    if(b.t==='kicker') html += `<p class="kicker">${b.x}</p>`;
+    else if(b.t==='byline') html += `<p class="byline">${b.x}</p>`;
+    else if(b.t==='h') html += `<h${b.lvl} class="hlblock reveal" data-b="${bCount++}">${b.x}</h${b.lvl}>`;
+    else if(b.t==='p') html += `<p class="hlblock reveal${b.lead?' lead':''}" data-b="${bCount++}">${b.x}${decoImgs(b.deco)}${b.deco?'<span class="deco-note">↑ Original-Dekobild — vom Reskin ausgeblendet</span>':''}</p>`;
+    else if(b.t==='gloss') html += `<aside class="gloss reveal"><span class="gloss-title">${b.title}</span><span class="hlblock" data-b="${bCount++}">${b.html}</span></aside>`;
+    else if(b.t==='rule') html += `<hr class="rule reveal">`;
+    else if(b.t==='fig'){
+      html += `<figure class="reveal"><img src="${IMG}${b.src}" width="${b.w}" height="${b.h}" alt="${b.cap.replace(/"/g,'&quot;')}" data-cap="${b.cap.replace(/"/g,'&quot;')}" data-num="${b.num}" onerror="this.closest('figure').classList.add('img-missing');this.replaceWith(Object.assign(document.createElement('div'),{className:'img-ph',textContent:b.src}))">`+
+              `<figcaption class="hlblock" data-b="${bCount++}"><span class="fignum">${b.num}</span>${b.cap}</figcaption></figure>`;
+    }
+    else if(b.t==='table'){
+      let rows = b.rows.map(r=>`<tr>${r.map((c,i)=>`<td class="hlblock" data-b="${bCount++}">${c}</td>`).join('')}</tr>`).join('');
+      html += `<div class="tbl reveal"><p class="tbl-title">${b.title}</p><table class="data"><thead><tr>${b.head.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+  });
+  reader.innerHTML = html;
+  observeReveal();
+  reapplyHighlights();
+  layoutNotes();
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   3 · SETTINGS — CSS-variable driven, persisted to localStorage.
+   ══════════════════════════════════════════════════════════════════════ */
+const PROSE_FONTS = {
+  eb:"'EB Garamond', Georgia, serif",
+  cmu:"'CMU Serif','Latin Modern Roman', Georgia, serif",
+  'source-serif':"'Source Serif 4', Georgia, serif",
+  newsreader:"'Newsreader', Georgia, serif",
+  inter:"'Inter', system-ui, sans-serif",
+  'source-sans':"'Source Sans 3', system-ui, sans-serif",
+  'plex-sans':"'IBM Plex Sans', system-ui, sans-serif",
+};
+const LABEL_FONTS = {
+  'inter-label':"'Inter', system-ui, sans-serif",
+  'space-mono':"'Space Mono', ui-monospace, monospace",
+  'plex-mono':"'IBM Plex Mono', ui-monospace, monospace",
+  'cmu-tt':"'CMU Typewriter Text', ui-monospace, monospace",
+};
+const NOTE_FONTS = {
+  inter:"'Inter', system-ui, sans-serif",
+  'plex-sans':"'IBM Plex Sans', system-ui, sans-serif",
+  'source-sans':"'Source Sans 3', system-ui, sans-serif",
+  eb:"'EB Garamond', Georgia, serif",
+  'space-mono':"'Space Mono', ui-monospace, monospace",
+};
+const DEFAULTS = {
+  proseFont:'eb', labelFont:'inter-label', noteFont:'inter', fs:19, lh:1.68,
+  measure:680, gap:1.0, align:'left', accent:'#0e8373',
+  bg:'paper', hidedeco:true, frame:'hairline', motion:true,
+};
+const LS_SET='physio.reskin.settings', LS_HL='physio.reskin.highlights';
+let S = load(LS_SET, DEFAULTS);
+
+function load(k,f){ try{ return Object.assign({}, f, JSON.parse(localStorage.getItem(k))||{}); }catch(e){ return {...f}; } }
+function save(){ localStorage.setItem(LS_SET, JSON.stringify(S)); }
+
+function apply(){
+  const root=document.documentElement.style;
+  root.setProperty('--font-prose', PROSE_FONTS[S.proseFont]);
+  root.setProperty('--font-label', LABEL_FONTS[S.labelFont]);
+  root.setProperty('--font-note', NOTE_FONTS[S.noteFont]);
+  root.setProperty('--fs', S.fs+'px');
+  root.setProperty('--lh', S.lh);
+  root.setProperty('--measure', S.measure+'px');
+  root.setProperty('--gap', S.gap+'em');
+  root.setProperty('--accent', S.accent);
+  document.body.dataset.bg = S.bg;
+  document.body.dataset.hidedeco = S.hidedeco ? '1':'0';
+  document.body.dataset.figframe = S.frame;
+  document.body.dataset.motion = S.motion ? '1':'0';
+  reader.dataset.align = S.align;
+  // reflect into controls
+  q('#proseFont').value=S.proseFont; q('#labelFont').value=S.labelFont; q('#noteFont').value=S.noteFont;
+  q('#fs').value=S.fs; q('#fsVal').textContent=S.fs+'px';
+  q('#lh').value=S.lh; q('#lhVal').textContent=(+S.lh).toFixed(2);
+  q('#measure').value=S.measure; q('#measureVal').textContent=S.measure+'px';
+  q('#gap').value=S.gap; q('#gapVal').textContent=(+S.gap).toFixed(2);
+  q('#customColor').value=S.accent;
+  setSeg('#alignSeg', S.align); setSeg('#bgSeg', S.bg); setSeg('#frameSeg', S.frame);
+  setToggle('#hidedeco', S.hidedeco); setToggle('#motion', S.motion);
+  markSwatch();
+  layoutNotes();
+}
+const q=(s)=>document.querySelector(s), qa=(s)=>[...document.querySelectorAll(s)];
+function setSeg(sel,v){ qa(sel+' button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.v===v)); }
+function setToggle(sel,v){ q(sel).setAttribute('aria-pressed', !!v); }
+function markSwatch(){ qa('#swatches .cs').forEach(c=>c.classList.toggle('sel', c.dataset.c.toLowerCase()===S.accent.toLowerCase())); }
+
+/* control wiring */
+q('#proseFont').onchange=e=>{ S.proseFont=e.target.value; save(); apply(); };
+q('#labelFont').onchange=e=>{ S.labelFont=e.target.value; save(); apply(); };
+q('#noteFont').onchange=e=>{ S.noteFont=e.target.value; save(); apply(); };
+q('#fs').oninput=e=>{ S.fs=+e.target.value; q('#fsVal').textContent=S.fs+'px'; document.documentElement.style.setProperty('--fs',S.fs+'px'); layoutNotes(); };
+q('#fs').onchange=save;
+q('#lh').oninput=e=>{ S.lh=+e.target.value; q('#lhVal').textContent=(+S.lh).toFixed(2); document.documentElement.style.setProperty('--lh',S.lh); layoutNotes(); };
+q('#lh').onchange=save;
+q('#measure').oninput=e=>{ S.measure=+e.target.value; q('#measureVal').textContent=S.measure+'px'; document.documentElement.style.setProperty('--measure',S.measure+'px'); layoutNotes(); };
+q('#measure').onchange=save;
+q('#gap').oninput=e=>{ S.gap=+e.target.value; q('#gapVal').textContent=(+S.gap).toFixed(2); document.documentElement.style.setProperty('--gap',S.gap+'em'); layoutNotes(); };
+q('#gap').onchange=save;
+qa('#alignSeg button').forEach(b=>b.onclick=()=>{ S.align=b.dataset.v; save(); apply(); });
+qa('#bgSeg button').forEach(b=>b.onclick=()=>{ S.bg=b.dataset.v; save(); apply(); });
+qa('#frameSeg button').forEach(b=>b.onclick=()=>{ S.frame=b.dataset.v; save(); apply(); });
+qa('#swatches .cs').forEach(c=>c.onclick=()=>{ S.accent=c.dataset.c; save(); apply(); });
+q('#customColor').oninput=e=>{ S.accent=e.target.value; document.documentElement.style.setProperty('--accent',S.accent); markSwatch(); };
+q('#customColor').onchange=save;
+q('#hidedeco').onclick=()=>{ S.hidedeco=!S.hidedeco; save(); apply(); };
+q('#motion').onclick=()=>{ S.motion=!S.motion; save(); apply(); };
+q('#resetBtn').onclick=()=>{ S={...DEFAULTS}; save(); apply(); };
+
+/* panel open/close */
+const panel=q('#panel'), backdrop=q('#backdrop');
+const openP=()=>{ panel.classList.add('open'); backdrop.classList.add('show'); };
+const closeP=()=>{ panel.classList.remove('open'); backdrop.classList.remove('show'); };
+q('#openPanel').onclick=openP; q('#closePanel').onclick=closeP; backdrop.onclick=()=>{ closeP(); document.body.classList.remove('notes-open'); };
+
+/* ══════════════════════════════════════════════════════════════════════
+   4 · REVEAL ON SCROLL
+   ══════════════════════════════════════════════════════════════════════ */
+let io;
+function observeReveal(){
+  if(io) io.disconnect();
+  io=new IntersectionObserver((ents)=>{
+    ents.forEach(en=>{ if(en.isIntersecting){ en.target.classList.add('in'); io.unobserve(en.target); } });
+  },{ rootMargin:'0px 0px -8% 0px', threshold:0.05 });
+  qa('.reveal').forEach(el=>io.observe(el));
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   5 · FIGURE ZOOM + PIN
+   ══════════════════════════════════════════════════════════════════════ */
+const lightbox=q('#lightbox'), lbImg=q('#lbImg'), lbCap=q('#lbCap');
+let lbCurrent=null, lbScale=1, lbX=0, lbY=0;
+reader.addEventListener('click', e=>{
+  const img=e.target.closest('figure img'); if(!img) return;
+  openLightbox(img.getAttribute('src'), img.dataset.cap||'', img.dataset.num||'');
+});
+function openLightbox(src,cap,num){
+  lbCurrent={src,cap,num};
+  lbImg.src=src; lbCap.innerHTML = num?`<span class="fignum">${num}</span>${cap}`:cap;
+  lightbox.classList.add('show');
+  lbScale=1; lbX=0; lbY=0; lbApply(false);
+}
+function closeLightbox(){ lightbox.classList.remove('show'); }
+q('#lbClose').onclick=closeLightbox;
+lightbox.addEventListener('click', e=>{ if(e.target===lightbox) closeLightbox(); });
+q('#lbPin').onclick=()=>{ if(lbCurrent){ pinFigure(lbCurrent); closeLightbox(); } };
+
+/* ── preview zoom + pan (scroll / buttons / double-click) ──────────── */
+function lbApply(anim){
+  lbImg.style.transition = anim ? 'transform .18s var(--ease)' : 'none';
+  lbImg.style.transform = `translate(${lbX}px,${lbY}px) scale(${lbScale})`;
+  lbImg.classList.toggle('zoomed', lbScale>1);
+  const pct=q('#lbZoomPct'); if(pct) pct.textContent = Math.round(lbScale*100)+' %';
+}
+function lbClampPan(){
+  const maxX=(lbScale-1)*lbImg.clientWidth/2 + 30, maxY=(lbScale-1)*lbImg.clientHeight/2 + 30;
+  lbX=Math.max(-maxX, Math.min(maxX, lbX)); lbY=Math.max(-maxY, Math.min(maxY, lbY));
+}
+function lbZoomAt(factor, clientX, clientY, anim){
+  const prev=lbScale;
+  lbScale=Math.max(1, Math.min(6, lbScale*factor));
+  if(clientX!=null && lbScale!==prev){                 // keep the point under the cursor fixed
+    const r=lbImg.getBoundingClientRect();
+    const cx=clientX-(r.left+r.width/2), cy=clientY-(r.top+r.height/2), ratio=lbScale/prev;
+    lbX += cx*(1-ratio); lbY += cy*(1-ratio);
+  }
+  if(lbScale===1){ lbX=0; lbY=0; }
+  lbClampPan(); lbApply(!!anim);
+}
+function lbReset(){ lbScale=1; lbX=0; lbY=0; lbApply(true); }
+lightbox.addEventListener('wheel', e=>{ if(!lightbox.classList.contains('show')) return;
+  e.preventDefault(); lbZoomAt(e.deltaY<0?1.15:1/1.15, e.clientX, e.clientY, false); }, {passive:false});
+q('#lbZoomIn').onclick=()=>lbZoomAt(1.3, null, null, true);
+q('#lbZoomOut').onclick=()=>lbZoomAt(1/1.3, null, null, true);
+q('#lbZoomPct').onclick=lbReset;
+lbImg.addEventListener('dblclick', e=>{ if(lbScale>1) lbReset(); else lbZoomAt(2.2, e.clientX, e.clientY, true); });
+let lbPan=false, pSX=0, pSY=0, pX0=0, pY0=0;
+lbImg.addEventListener('pointerdown', e=>{ if(lbScale<=1) return; e.preventDefault();
+  lbPan=true; pSX=e.clientX; pSY=e.clientY; pX0=lbX; pY0=lbY; lbImg.classList.add('grabbing');
+  try{ lbImg.setPointerCapture(e.pointerId); }catch(_){} });
+lbImg.addEventListener('pointermove', e=>{ if(!lbPan) return;
+  lbX=pX0+(e.clientX-pSX); lbY=pY0+(e.clientY-pSY); lbClampPan(); lbApply(false); });
+const lbEndPan=e=>{ if(!lbPan) return; lbPan=false; lbImg.classList.remove('grabbing'); try{ lbImg.releasePointerCapture(e.pointerId); }catch(_){} };
+lbImg.addEventListener('pointerup', lbEndPan);
+lbImg.addEventListener('pointercancel', lbEndPan);
+
+const pinRail=q('#pinRail');
+let PINS = load('physio.reskin.pins', {list:[]}).list;
+function savePins(){ localStorage.setItem('physio.reskin.pins', JSON.stringify({list:PINS})); }
+function pinFigure(fig){
+  if(PINS.find(p=>p.src===fig.src)) return; // no dupes
+  PINS.push(fig); savePins(); renderPins();
+}
+function renderPins(){
+  pinRail.classList.toggle('empty', PINS.length===0);
+  const head = PINS.length
+    ? `<div class="pin-head"><span class="pin-head-title">Angeheftet · ${PINS.length}</span><button class="pin-unpin-all">Alle lösen</button></div>`
+    : '';
+  pinRail.innerHTML = head + PINS.map((p,i)=>
+    `<div class="pin${p.collapsed?' collapsed':''}" draggable="true" data-key="${encodeURIComponent(p.src)}" style="${p.w?`width:${p.w}px`:''}">`+
+      `<img src="${p.src}" alt="" draggable="false" onerror="this.style.minHeight='40px'">`+
+      `<div class="pin-bar">`+
+        `<span class="pin-grip" title="Ziehen zum Umordnen">⠿</span>`+
+        `<span class="pin-cap">${(p.num||'')} ${(p.cap||'')}</span>`+
+        `<button class="pin-zoom" data-i="${i}" data-dir="-1" title="Kleiner">−</button>`+
+        `<button class="pin-zoom" data-i="${i}" data-dir="1" title="Größer">+</button>`+
+        `<button class="pin-collapse" data-i="${i}" title="${p.collapsed?'Ausklappen':'Einklappen'}">${p.collapsed?'▸':'▾'}</button>`+
+        `<button class="pin-x" data-i="${i}" title="Lösen">✕</button>`+
+      `</div>`+
+    `</div>`).join('');
+  qa('.pin img').forEach((im,i)=>im.onclick=()=>{ if(!PINS[i].collapsed) openLightbox(PINS[i].src, PINS[i].cap, PINS[i].num); });
+  qa('.pin-zoom').forEach(b=>b.onclick=()=>resizePin(+b.dataset.i, +b.dataset.dir, b.closest('.pin')));
+  qa('.pin-collapse').forEach(b=>b.onclick=()=>{ const i=+b.dataset.i; PINS[i].collapsed=!PINS[i].collapsed; savePins(); renderPins(); });
+  qa('.pin-x').forEach(x=>x.onclick=()=>{
+    const i=+x.dataset.i, [removed]=PINS.splice(i,1); savePins(); renderPins();
+    showToast('Abbildung gelöst', {actionLabel:'Rückgängig', onAction:()=>{ PINS.splice(Math.min(i,PINS.length),0,removed); savePins(); renderPins(); }});
+  });
+  const all=pinRail.querySelector('.pin-unpin-all');
+  if(all) all.onclick=()=>{
+    const backup=PINS.slice(); PINS.length=0; savePins(); renderPins();
+    showToast('Alle Abbildungen gelöst', {actionLabel:'Rückgängig', onAction:()=>{ PINS.push(...backup); savePins(); renderPins(); }});
+  };
+  qa('.pin').forEach(pin=>{
+    pin.addEventListener('dragstart', e=>{ pin.classList.add('dragging');
+      if(e.dataTransfer){ e.dataTransfer.effectAllowed='move'; try{ e.dataTransfer.setData('text/plain', pin.dataset.key); }catch(_){} } });
+    pin.addEventListener('dragend', ()=>{ pin.classList.remove('dragging'); commitPinOrder(); });
+  });
+}
+function getDragAfterElement(y){
+  let closest={offset:-Infinity, el:null};
+  pinRail.querySelectorAll('.pin:not(.dragging)').forEach(child=>{
+    const box=child.getBoundingClientRect(); const offset=y-box.top-box.height/2;
+    if(offset<0 && offset>closest.offset) closest={offset, el:child};
+  });
+  return closest.el;
+}
+function pinDragOver(e){
+  const dragging=pinRail.querySelector('.pin.dragging'); if(!dragging) return;
+  e.preventDefault();
+  const after=getDragAfterElement(e.clientY);
+  if(after==null) pinRail.appendChild(dragging); else pinRail.insertBefore(dragging, after);
+}
+function commitPinOrder(){
+  const order=[...pinRail.querySelectorAll('.pin')].map(el=>decodeURIComponent(el.dataset.key));
+  PINS.sort((a,b)=>order.indexOf(a.src)-order.indexOf(b.src));
+  savePins(); renderPins();
+}
+function resizePin(i, dir, pin){
+  if(!pin || !PINS[i]) return;
+  const cs=getComputedStyle(pinRail);
+  const railInner = Math.round(pinRail.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
+  const cur = PINS[i].w || Math.round(pin.getBoundingClientRect().width);
+  const w = Math.max(150, Math.min(railInner, cur + dir*46));   // grows to fill the margin, never into the text
+  PINS[i].w = w; pin.style.width = w+'px'; savePins();
+  pin.querySelectorAll('.pin-zoom').forEach(b=>{
+    b.disabled = (+b.dataset.dir<0 && w<=150) || (+b.dataset.dir>0 && w>=railInner);
+  });
+}
+pinRail.addEventListener('dragover', pinDragOver);
+
+/* ── undo toaster (sonner-inspired) — stacks bottom-right, hover pauses ── */
+const toaster=q('#toaster');
+function showToast(msg, opts={}){
+  const t=document.createElement('div'); t.className='sonner';
+  t.innerHTML=`<span class="sonner-msg">${msg}</span>`+(opts.actionLabel?`<button class="sonner-action">${opts.actionLabel}</button>`:'');
+  toaster.appendChild(t);
+  requestAnimationFrame(()=>t.classList.add('show'));
+  let timer=null;
+  const dismiss=()=>{ if(t._done) return; t._done=true; clearTimeout(timer); t.classList.remove('show'); t.classList.add('hide'); setTimeout(()=>t.remove(),320); };
+  const arm=ms=>{ clearTimeout(timer); timer=setTimeout(dismiss, ms); };
+  t.addEventListener('mouseenter', ()=>clearTimeout(timer));
+  t.addEventListener('mouseleave', ()=>arm(2500));
+  if(opts.actionLabel) t.querySelector('.sonner-action').onclick=()=>{ try{ opts.onAction && opts.onAction(); } finally { dismiss(); } };
+  arm(opts.duration||5000);
+  return t;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
+   6 · HIGHLIGHTS + MARGIN NOTES
+   Highlights are stored as {id,b,start,end,color,note}. On load each is
+   re-wrapped by walking the text of its block [data-b]. Notes render in
+   the right gutter, vertically aligned to their highlight.
+   ══════════════════════════════════════════════════════════════════════ */
+let HLS = load(LS_HL, {list:[]}).list;
+function saveHL(){ localStorage.setItem(LS_HL, JSON.stringify({list:HLS})); }
+const uid=()=> 'h'+bHash()+(HLS.length);
+let _seq=0; function bHash(){ return (_seq++).toString(36); }
+
+const hlPop=q('#hlPop');
+let pending=null;       // {b,start,end}  a fresh selection awaiting a colour
+
+function textNodes(el){ const w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT,null); const a=[]; let n; while(n=w.nextNode()){ if(!n.parentElement.closest('.deco-note')) a.push(n);} return a; }
+function globalOffset(block,node,off){
+  let pos=0; for(const tn of textNodes(block)){ if(tn===node) return pos+off; pos+=tn.textContent.length; } return pos;
+}
+function wrapRange(block,start,end,color,id,hasNote){
+  const nodes=textNodes(block); let pos=0;
+  nodes.forEach(node=>{
+    const len=node.textContent.length, ns=pos, ne=pos+len; pos+=len;
+    if(ne<=start||ns>=end) return;
+    const s=Math.max(0,start-ns), en=Math.min(len,end-ns);
+    const r=document.createRange(); r.setStart(node,s); r.setEnd(node,en);
+    const m=document.createElement('mark'); m.className='hl'+(hasNote?' has-note':''); m.dataset.color=color; m.dataset.hid=id;
+    try{ r.surroundContents(m); }catch(err){}
+  });
+}
+function reapplyHighlights(){
+  HLS.forEach(h=>{ const block=reader.querySelector(`[data-b="${h.b}"]`); if(block) wrapRange(block,h.start,h.end,h.color,h.id,!!(h.note&&h.note.length)); });
+}
+
+/* selection → popover */
+reader.addEventListener('mouseup', ()=>setTimeout(handleSelection, 0));
+function handleSelection(){
+  const sel=window.getSelection();
+  if(!sel || sel.isCollapsed || !sel.rangeCount){ return hidePop(); }
+  const range=sel.getRangeAt(0);
+  const block = commonBlock(range);
+  if(!block || !range.toString().trim()){ return hidePop(); }
+  const start=globalOffset(block, range.startContainer, range.startOffset);
+  const end=globalOffset(block, range.endContainer, range.endOffset);
+  pending={ b:block.dataset.b, start:Math.min(start,end), end:Math.max(start,end) };
+  showPopAt(range.getBoundingClientRect());
+}
+function commonBlock(range){
+  let el = range.commonAncestorContainer;
+  if(el.nodeType===3) el=el.parentElement;
+  const b = el.closest('.hlblock');
+  // must be fully inside a single block
+  const sb = (range.startContainer.nodeType===3?range.startContainer.parentElement:range.startContainer).closest('.hlblock');
+  const eb = (range.endContainer.nodeType===3?range.endContainer.parentElement:range.endContainer).closest('.hlblock');
+  return (b && sb===b && eb===b) ? b : null;
+}
+function showPopAt(rect){
+  const sx=window.scrollX, sy=window.scrollY;
+  hlPop.style.left=(sx+rect.left+rect.width/2)+'px';
+  hlPop.style.top=(sy+rect.top)+'px';
+  hlPop.classList.add('show');
+}
+function hidePop(){ hlPop.classList.remove('show'); }
+
+/* choose a colour for a fresh selection */
+qa('.hl-pop .sw').forEach(sw=>sw.onclick=()=>{
+  if(pending) commitHighlight(sw.dataset.color);
+  hidePop(); window.getSelection().removeAllRanges();
+});
+q('.act[data-act="note"]').onclick=()=>{
+  const h = pending ? commitHighlight('teal') : null;
+  hidePop(); window.getSelection().removeAllRanges();
+  if(h){ addOrEditNote(h.id); }
+};
+function addOrEditNote(id){
+  const h=HLS.find(x=>x.id===id); if(!h) return;
+  if(h.note==null) h.note='';
+  saveHL(); layoutNotes(); focusNote(id);
+}
+
+/* ── right-click context menu on an existing highlight ─────────────── */
+const ctx=document.createElement('div'); ctx.className='ctx-menu'; document.body.appendChild(ctx);
+let ctxHid=null;
+function openCtx(x,y,hid){
+  ctxHid=hid;
+  const h=HLS.find(z=>z.id===hid); const cur=h?h.color:'teal'; const hasNote=h && h.note!=null;
+  ctx.innerHTML =
+    `<div class="ctx-label">Markierung</div>`+
+    `<div class="ctx-colors">`+
+      ['teal','amber','rose','underline'].map(c=>`<span class="ctx-sw${c===cur?' sel':''}" data-color="${c}" title="${c}"></span>`).join('')+
+    `</div>`+
+    `<div class="ctx-sep"></div>`+
+    `<button class="ctx-item" data-act="note">✎ ${hasNote?'Notiz bearbeiten':'Notiz hinzufügen'}</button>`+
+    `<div class="ctx-sep"></div>`+
+    `<button class="ctx-item danger" data-act="remove">✕ Markierung entfernen</button>`;
+  ctx.style.left=x+'px'; ctx.style.top=y+'px'; ctx.classList.add('show');
+  requestAnimationFrame(()=>{ const r=ctx.getBoundingClientRect();
+    if(r.right>innerWidth-8) ctx.style.left=(innerWidth-r.width-8)+'px';
+    if(r.bottom>innerHeight-8) ctx.style.top=(innerHeight-r.height-8)+'px'; });
+}
+function closeCtx(){ ctx.classList.remove('show'); ctxHid=null; }
+reader.addEventListener('contextmenu', e=>{
+  const m=e.target.closest('mark.hl'); if(!m) return;
+  e.preventDefault(); openCtx(e.clientX, e.clientY, m.dataset.hid);
+});
+ctx.addEventListener('click', e=>{
+  const sw=e.target.closest('.ctx-sw');
+  if(sw){ recolor(ctxHid, sw.dataset.color); closeCtx(); return; }
+  const item=e.target.closest('.ctx-item'); if(!item) return;
+  if(item.dataset.act==='remove') removeHighlight(ctxHid);
+  else if(item.dataset.act==='note') addOrEditNote(ctxHid);
+  closeCtx();
+});
+
+/* ── promise-based confirm dialog ──────────────────────────────────── */
+function confirmDialog(title, msg, okLabel='Löschen'){
+  return new Promise(res=>{
+    document.querySelectorAll('.confirm-back').forEach(el=>el.remove()); // never stack
+    const back=document.createElement('div'); back.className='confirm-back';
+    back.innerHTML=`<div class="confirm" role="alertdialog" aria-modal="true"><h3>${title}</h3><p>${msg}</p>`+
+      `<div class="row"><button class="cancel">Abbrechen</button><button class="danger ok">${okLabel}</button></div></div>`;
+    document.body.appendChild(back);
+    requestAnimationFrame(()=>back.classList.add('show'));
+    const done=v=>{ back.classList.remove('show'); document.removeEventListener('keydown',onKey); setTimeout(()=>back.remove(),220); res(v); };
+    const onKey=ev=>{ if(ev.key==='Escape') done(false); if(ev.key==='Enter') done(true); };
+    back.querySelector('.cancel').onclick=()=>done(false);
+    back.querySelector('.ok').onclick=()=>done(true);
+    back.addEventListener('mousedown', ev=>{ if(ev.target===back) done(false); });
+    document.addEventListener('keydown', onKey);
+    setTimeout(()=>back.querySelector('.ok').focus(), 30);
+  });
+}
+
+function commitHighlight(color){
+  const h={ id:uid(), b:+pending.b, start:pending.start, end:pending.end, color, note:null,
+            text:'' };
+  HLS.push(h); saveHL();
+  const block=reader.querySelector(`[data-b="${h.b}"]`);
+  if(block) wrapRange(block,h.start,h.end,color,h.id,false);
+  pending=null; return h;
+}
+function recolor(id,color){
+  const h=HLS.find(x=>x.id===id); if(h){ h.color=color; saveHL(); }
+  qa(`mark.hl[data-hid="${id}"]`).forEach(m=>m.dataset.color=color);
+}
+function removeHighlight(id){
+  const removed=HLS.find(x=>x.id===id);
+  qa(`mark.hl[data-hid="${id}"]`).forEach(m=>{ const p=m.parentNode; while(m.firstChild) p.insertBefore(m.firstChild,m); p.removeChild(m); p.normalize(); });
+  HLS=HLS.filter(x=>x.id!==id); saveHL(); layoutNotes();
+  if(removed) showToast(removed.note && removed.note.trim() ? 'Markierung & Notiz entfernt' : 'Markierung entfernt',
+    {actionLabel:'Rückgängig', onAction:()=>restoreHighlight(removed)});
+}
+function restoreHighlight(h){
+  if(HLS.find(x=>x.id===h.id)) return;
+  HLS.push(h); saveHL();
+  const block=reader.querySelector(`[data-b="${h.b}"]`);
+  if(block) wrapRange(block,h.start,h.end,h.color,h.id,!!(h.note&&h.note.trim().length));
+  layoutNotes();
+}
+function markHasNote(id,on){ qa(`mark.hl[data-hid="${id}"]`).forEach(m=>m.classList.toggle('has-note',on)); }
+
+/* ── margin notes rendering ─────────────────────────────────────────── */
+const gutter=q('#noteGutter');
+function layoutNotes(){
+  const withNotes = HLS.filter(h=>h.note != null);   // null = no note; '' = empty but active box
+  gutter.querySelectorAll('.note').forEach(n=>{ if(!withNotes.find(h=>h.id===n.dataset.id)) n.remove(); });
+  // Notes are absolutely positioned inside the gutter, so measure against the
+  // gutter's own top (not the padded .stage) to sit level with the highlight.
+  const gutterTop = gutter.getBoundingClientRect().top + window.scrollY;
+  let lastBottom = 0;
+  withNotes
+    .map(h=>({h, mark:reader.querySelector(`mark.hl[data-hid="${h.id}"]`)}))
+    .filter(o=>o.mark)
+    .sort((a,b)=> a.mark.getBoundingClientRect().top - b.mark.getBoundingClientRect().top)
+    .forEach(({h,mark})=>{
+      let note=gutter.querySelector(`.note[data-id="${h.id}"]`);
+      if(!note){ note=makeNote(h); gutter.appendChild(note); }
+      const top = mark.getBoundingClientRect().top + window.scrollY - gutterTop - 6; // nudge to align text
+      const y = Math.max(top, lastBottom);
+      note.style.top = y+'px';
+      lastBottom = y + note.offsetHeight + 12;
+    });
+  gutter.classList.toggle('has-notes', withNotes.length>0);
+}
+function makeNote(h){
+  const note=document.createElement('div'); note.className='note'; note.dataset.id=h.id;
+  note.innerHTML = `<textarea placeholder="Randnotiz…">${(h.note||'').trim()}</textarea>`+
+    `<div class="note-meta"><span class="note-tag">Notiz</span><button class="note-del" title="Notiz löschen">✕</button></div>`;
+  const ta=note.querySelector('textarea');
+  const grow=()=>{ ta.style.height='auto'; ta.style.height=ta.scrollHeight+'px'; };
+  const marks=()=>qa(`mark.hl[data-hid="${h.id}"]`);
+  const lightUp=on=>marks().forEach(m=>m.classList.toggle('note-hover',on));
+  ta.addEventListener('input',()=>{ h.note=ta.value; saveHL(); grow(); layoutNotes(); markHasNote(h.id, !!ta.value.trim()); });
+  ta.addEventListener('focus',()=>lightUp(true));
+  ta.addEventListener('blur',()=>{ lightUp(false); if(!ta.value.trim()){ h.note=null; saveHL(); markHasNote(h.id,false); note.remove(); layoutNotes(); }});
+  // Enter finishes the note; Shift+Enter inserts a line break
+  ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); ta.blur(); } });
+  // hover a note → its highlight lights up so you can see what it refers to
+  note.addEventListener('mouseenter',()=>{ note.classList.add('hovered'); lightUp(true); });
+  note.addEventListener('mouseleave',()=>{ note.classList.remove('hovered'); if(document.activeElement!==ta) lightUp(false); });
+  // delete with confirmation (only prompts when there is text to lose)
+  note.querySelector('.note-del').addEventListener('click', async ()=>{
+    if(ta.value.trim()){
+      const ok=await confirmDialog('Notiz löschen?','Diese Randnotiz wird dauerhaft entfernt. Die Markierung bleibt bestehen.');
+      if(!ok) return;
+    }
+    const prev=h.note;
+    h.note=null; saveHL(); markHasNote(h.id,false); lightUp(false); note.remove(); layoutNotes();
+    if(prev && prev.trim()) showToast('Notiz gelöscht', {actionLabel:'Rückgängig', onAction:()=>{ h.note=prev; saveHL(); markHasNote(h.id, !!prev.trim()); layoutNotes(); }});
+  });
+  requestAnimationFrame(grow);
+  return note;
+}
+function focusNote(id){ const n=gutter.querySelector(`.note[data-id="${id}"] textarea`); if(n){ n.focus(); } }
+
+/* clicking a mark that has a note → jump to & focus its note */
+reader.addEventListener('dblclick', e=>{ const m=e.target.closest('mark.hl.has-note'); if(m){ focusNote(m.dataset.hid); q('#noteGutter').classList.add('flash'); } });
+
+/* ══════════════════════════════════════════════════════════════════════
+   7 · GLOBAL EVENTS
+   ══════════════════════════════════════════════════════════════════════ */
+document.addEventListener('keydown', e=>{ if(e.key==='Escape'){ closeLightbox(); closeP(); hidePop(); closeCtx(); } });
+document.addEventListener('mousedown', e=>{
+  if(!hlPop.contains(e.target) && !e.target.closest('mark.hl')) hidePop();
+  if(!ctx.contains(e.target)) closeCtx();
+});
+window.addEventListener('scroll', ()=>closeCtx(), {passive:true});
+window.addEventListener('resize', ()=>{ clearTimeout(window._rz); window._rz=setTimeout(layoutNotes,120); });
+
+/* notes drawer toggle (narrow screens) */
+q('#notesToggle').onclick=()=>document.body.classList.toggle('notes-open');
+function updateNotesToggle(){ const on = window.matchMedia('(max-width:1180px)').matches && HLS.some(h=>h.note&&h.note.trim()); q('#notesToggle').hidden = !on; }
+window.addEventListener('resize', updateNotesToggle);
+
+/* onboarding toast — once */
+const toast=q('#toast');
+if(!localStorage.getItem('physio.reskin.seen')){
+  setTimeout(()=>toast.classList.add('show'), 900);
+}
+q('#toastX').onclick=()=>{ toast.classList.remove('show'); localStorage.setItem('physio.reskin.seen','1'); };
+
+/* ══════════════════════════════════════════════════════════════════════
+   8 · ACTIVATION REVEAL — draws the reskinned page top→bottom.
+   In the extension this plays once when the extension activates on a page.
+   ══════════════════════════════════════════════════════════════════════ */
+const activate=q('#activate'), activateLine=q('#activateLine');
+function playReveal(){
+  if(!S.motion || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  [activate,activateLine].forEach(el=>{ el.classList.remove('run'); void el.offsetWidth; el.classList.add('run'); });
+  activate.addEventListener('animationend', ()=>{ activate.classList.remove('run'); activateLine.classList.remove('run'); }, {once:true});
+}
+q('#replayReveal').onclick=playReveal;
+
+/* ══════════════════════════════════════════════════════════════════════
+   9 · BOOT
+   ══════════════════════════════════════════════════════════════════════ */
+render();
+apply();
+renderPins();
+playReveal();
+setTimeout(()=>reader.classList.add('in'), 30);
+updateNotesToggle();
+</script>
+</body>
+</html>
