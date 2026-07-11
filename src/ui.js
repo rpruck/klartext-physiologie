@@ -18,7 +18,6 @@
   const TOPBAR = `
     <div id="pr-topbar" part="topbar">
       <button class="tb-btn" id="notesToggle" hidden>Notizen</button>
-      <button class="tb-btn" id="replayReveal" title="Aktivierungs-Animation abspielen">⟲ Reveal</button>
       <button class="tb-btn" id="openPanel">✦ Einstellungen</button>
     </div>`;
 
@@ -198,6 +197,7 @@
 
     const root = document.createElement('div');
     root.className = 'pr-ui-root';
+    // one-time activation overlay (played once per session by activate.js)
     const ACTIVATE = `<div class="activate" id="activate"></div><div class="activate-line" id="activateLine"></div>`;
     root.innerHTML = TOPBAR + PINRAIL + NOTEGUTTER + LIGHTBOX + HLPOP + PANEL + TOASTER + ACTIVATE;
     shadow.appendChild(root);
@@ -215,8 +215,6 @@
     $('#openPanel').onclick = open;
     $('#closePanel').onclick = close;
     backdrop.onclick = close;
-    const rr = $('#replayReveal');
-    if (rr) rr.onclick = () => PR.activate && PR.activate.play && PR.activate.play(true);
   }
 
   PR.ui = { mount };

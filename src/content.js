@@ -67,7 +67,7 @@
     const page = pageKey ? (await PR.store.get(pageKey)) || {} : {};
     if (PR.tools && PR.tools.restore) PR.tools.restore(page);
 
-    // 8 · Reveal + (M9) play the activation animation once per session.
+    // 8 · Reveal the finished page + play the one-time activation animation.
     reveal();
     PR.activate && PR.activate.play && PR.activate.play();
 

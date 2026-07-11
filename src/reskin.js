@@ -23,43 +23,124 @@
 
   const base = (s) => (s || '').split('/').pop().split('?')[0].split('#')[0];
 
-  // ── image taxonomy ──────────────────────────────────────────────────────
-  // Chapter navigation images → replace with a clean text link (keeping href).
-  const NAV = {
-    'previous.gif': '‹ Zurück',
-    'nexttopic.gif': 'Weiter ›',
-    'man_KapUe.jpg': 'Kapitelübersicht',
+  /* ── image taxonomy ──────────────────────────────────────────────────────
+     Three buckets: NAVIGATION (button/arrow images whose only job is to link
+     somewhere → become clean text links), DECORATION (icons, dots, spacers,
+     label banners, mascots → hidden), and FIGURES (the informative scientific
+     illustrations → kept, zoomable, pinnable).
+
+     Signals, in order of trust:
+       1. A lone image inside a link to another PAGE is navigation. Real
+          figures that link do so with a #anchor ("see this figure in
+          context"); pure page links (II.htm, I.0.htm, Pruef.htm) are nav.
+       2. Decorative markers REPEAT — a file used 3+ times on one page is
+          structural chrome (rechtspfeil x95, Fingerzeig x62, dots, spacers).
+          Real figures appear exactly once.
+       3. Size — tiny (< 55px short side), thin label banners, and small
+          ambiguous graphics are decoration; anything with real area
+          (>= 11000px2 or >= 120px short side) is a figure.
+     A short curated name list is only a backstop for single-use decorative art
+     (mascots/labels on hub pages) that slips past the heuristics. */
+
+  // Known navigation button/arrow images → labelled text links (keys lowercase).
+  const NAV_LABEL = {
+    'previous.gif': '‹ Zurück',
+    'nexttopic.gif': 'Weiter ›',
+    'man_kapue.jpg': 'Kapitelübersicht',
+    'homebut.jpg': 'Startseite',
+    'los_gehts.jpg': 'Los geht’s ›',
+    'rechtsblau.jpg': 'Weiter ›',
+    'linksblau.jpg': '‹ Zurück',
+    'greenbutton.jpg': 'Weiter ›',
+    'fua.jpg': 'Fragen & Antworten',
+    'reise12.jpg': 'Zu den Prüfungsfragen',
+    'reise3.jpg': 'Zu den Prüfungsfragen',
   };
-  // Known decorative junk (icons, dots, spacer gifs, label banners, splash art).
-  // Size alone misclassifies several of these (vitru 120×136, merke2, trumpetS,
-  // Begriff, FuA, FKH), so this list is the primary signal.
+
+  // Single-use decorative art (mascots, motto banners, section labels) that the
+  // size/repeat heuristics cannot catch on their own. Dots/spacers/icons are
+  // caught by repeat count and size, so this list stays short.
   const DECO = new Set([
-    'rechtspfeil.gif', 'fingerzeig.jpg', 'pll.jpg', 'platzhalter.jpg',
-    '0l.jpg', '0r.jpg', 'vitru.jpg', 'index_finger.jpg', 'arrow.jpg',
-    'begriff.jpg', 'begriffe.jpg', 'yellowball.jpg', 'dot_silver.jpg',
-    'purpledot.jpeg', 'redball.gif', 'orangedot.jpg', 'mauvedot.jpg',
-    'excl_m.jpg', 'icon_rund.jpg', 'stern.jpg', 'aster.jpg', 'nicebar.jpg',
-    'blue_ani.gif', 'def_kl.jpg', 'pharm.jpg', 'histor.jpg', 'merke2.jpg',
-    'merke.jpg', 'trumpets.jpg', 'trumpet.jpg', 'fua.jpg', 'fkh.jpg',
-    'nexttopic.gif', 'previous.gif', // (handled by NAV first; here as backstop)
+    'begriff.jpg', 'begriffe.jpg', 'exkurs.jpg', 'spruchband.jpg', 'snake.jpg',
+    'column.gif', 'smile1.jpeg', 'openacc.jpg', 'lstrc_archivelogo.png',
+    'life_has_meaning.jpg', 'dt_real.jpg', 'vitru.jpg', 'merke.jpg', 'merke2.jpg',
+    'pharm.jpg', 'histor.jpg', 'fkh.jpg', 'anw.jpg', 'orientierung.jpg', 'etym.jpg',
   ]);
-  // Splash / branding art on hubs and the home page.
-  const DECO_PREFIX = /^(man|hhs|reise|welcome|dilbert|smiley|aeskulap|saeule)/i;
+  // Splash / branding / mascot art on hubs and the home page.
+  const DECO_PREFIX = /^(hhs|reise|welcome|dilbert|smiley|aeskulap|saeule)/i;
 
   function isDecoName(f) {
     f = f.toLowerCase();
     return DECO.has(f) || DECO_PREFIX.test(f);
   }
 
-  function convertNav(img, label) {
-    const a = img.closest('a[href]');
-    if (a) {
-      a.textContent = label;
-      a.classList.add('pr-nav');
-      img.remove();
-    } else {
-      img.classList.add('pr-deco');
+  // A figure is worth keeping/zooming when it has real area; small single-use
+  // graphics (chapter badges, "Exkurs" labels) are decoration.
+  function isFigureSize(w, h) {
+    return (w * h >= 11000) || (Math.min(w, h) >= 120);
+  }
+
+  // Intrinsic size if the image has loaded, else the size declared in markup.
+  // This site states sizes inline (style="width:615px; height:332px") and the
+  // reskin classifies at document_end BEFORE images load, so the markup size is
+  // what we usually read — naturalWidth just refines it once loaded.
+  const styleDim = (img, prop) => {
+    const m = (img.getAttribute('style') || '').match(new RegExp('(?:^|;|\\s)' + prop + ':\\s*(\\d+(?:\\.\\d+)?)px', 'i'));
+    return m ? Math.round(parseFloat(m[1])) : 0;
+  };
+  function imgSize(img) {
+    const w = img.naturalWidth || parseInt(img.getAttribute('width'), 10) || styleDim(img, 'width') || 0;
+    const h = img.naturalHeight || parseInt(img.getAttribute('height'), 10) || styleDim(img, 'height') || 0;
+    return [w, h];
+  }
+
+  // href points to another page on this site (not an in-page #anchor, not an
+  // external site, not mailto) — the hallmark of a navigation button.
+  function isPageLink(href) {
+    if (!href) return false;
+    if (href[0] === '#') return false;
+    if (/^(mailto|javascript):/i.test(href)) return false;
+    if (/^https?:\/\//i.test(href)) return false;   // external → not site nav
+    if (href.includes('#')) return false;            // #anchor → figure reference
+    return /\.html?$/i.test(base(href));
+  }
+
+  function navLabel(f, href, alt) {
+    if (NAV_LABEL[f]) return NAV_LABEL[f];
+    const b = base(href).toLowerCase();
+    const rom = b.match(/^([ivxlc]+)\.html?$/);
+    if (rom) return 'Kapitel ' + rom[1].toUpperCase() + ' ›';
+    if (/^index\.html?$/.test(b)) return 'Startseite';
+    if (/^pruef/.test(b)) return 'Zu den Prüfungsfragen';
+    if (alt && alt.trim()) return alt.trim();
+    return 'Weiter ›';
+  }
+
+  // The anchor contains only this image (no visible text of its own).
+  function isSoleImageLink(a) {
+    return a && !a.textContent.trim() && a.querySelectorAll('img').length === 1;
+  }
+  // A sibling link to the same target already carries text, so the arrow image
+  // is redundant and can simply be dropped.
+  function hasRedundantTextLink(a) {
+    const href = a.getAttribute('href');
+    for (const sib of [a.previousElementSibling, a.nextElementSibling]) {
+      if (sib && sib.tagName === 'A' && sib.getAttribute('href') === href && sib.textContent.trim()) return true;
     }
+    return false;
+  }
+
+  // Turn a navigation image into a clean text link — or drop it entirely when an
+  // equivalent text link already sits beside it.
+  function convertNav(img, a, label) {
+    if (hasRedundantTextLink(a)) {
+      img.remove();
+      if (!a.textContent.trim() && !a.querySelector('img')) a.remove();
+      return;
+    }
+    a.textContent = label;
+    a.classList.add('pr-nav');
+    img.remove();
   }
 
   function wrapFigure(img) {
@@ -72,26 +153,56 @@
     img.dataset.prFig = '1'; // M6 wires click-to-zoom/pin off this
   }
 
-  // Size-based fallback for images not on either list. naturalWidth is 0 until
-  // the image loads and there are no width/height attrs, so defer to `load`.
+  // Size-based decision for images that are not nav / known-deco / repeated.
+  // Sizes usually come from the markup (see imgSize); if an image declares none
+  // and hasn't loaded, defer until its intrinsic size is known.
   function decideBySize(img) {
-    const run = () => {
-      const w = img.naturalWidth, h = img.naturalHeight;
-      if (!w && !h) return;               // still unknown → leave inline
-      if (w >= 120 || h >= 110) wrapFigure(img);
-      else if (Math.min(w, h) < 60) img.classList.add('pr-deco');
-      // 60–120px: ambiguous, leave inline (rare)
+    const decide = () => {
+      const [w, h] = imgSize(img);
+      if (!w || !h) return;                        // still unknown → leave inline
+      const mn = Math.min(w, h), aspect = mn ? Math.max(w, h) / mn : 99;
+      if (mn < 55 || w * h < 4000) { img.classList.add('pr-deco'); return; }    // dots/spacers/thin rules
+      if (aspect >= 4.5 && mn <= 60) { img.classList.add('pr-deco'); return; }  // label banners
+      if (isFigureSize(w, h)) { wrapFigure(img); return; }
+      img.classList.add('pr-deco');                 // small single-use graphic
     };
-    if (img.complete && img.naturalWidth) run();
-    else img.addEventListener('load', run, { once: true });
+    const [w, h] = imgSize(img);
+    if (w && h) decide();
+    else if (!img.complete) img.addEventListener('load', decide, { once: true });
+    // else: loaded but sizeless (broken image) → leave inline
   }
 
   function classifyImages(root) {
     root = root || document.getElementById('pr-reader') || document.body;
-    root.querySelectorAll('img').forEach((img) => {
-      const f = base(img.getAttribute('src'));
-      if (NAV[f]) { convertNav(img, NAV[f]); return; }
+    const imgs = [...root.querySelectorAll('img')];
+
+    // Per-page occurrence count: a file used 3+ times is structural chrome.
+    // Classify on the lower-cased basename so name lookups are case-insensitive
+    // (the site mixes Los_gehts.jpg / man_KapUe.jpg / FuA.jpg); the real src
+    // attribute is never touched, so images still load.
+    const counts = new Map();
+    imgs.forEach((img) => { const f = base(img.getAttribute('src')).toLowerCase(); counts.set(f, (counts.get(f) || 0) + 1); });
+
+    imgs.forEach((img) => {
+      const f = base(img.getAttribute('src')).toLowerCase();
+      const a = img.closest('a[href]');
+      const sole = isSoleImageLink(a);
+
+      // 1 · navigation — known nav art (any size), or a lone image linking to a
+      //     page. The figure-size guard keeps a genuine illustration that merely
+      //     happens to link out from being demoted to a text link.
+      if (a && sole) {
+        const [w, h] = imgSize(img);
+        if (NAV_LABEL[f] || (isPageLink(a.getAttribute('href')) && !isFigureSize(w, h))) {
+          convertNav(img, a, navLabel(f, a.getAttribute('href'), img.getAttribute('alt')));
+          return;
+        }
+      }
+      // 2 · known decorative art (mascots, labels) — backstop for single-use junk.
       if (isDecoName(f)) { img.classList.add('pr-deco'); return; }
+      // 3 · repeated markers (icons, dots, spacers, arrows used many times).
+      if (counts.get(f) >= 3) { img.classList.add('pr-deco'); return; }
+      // 4 · everything else decided by size (deferred until load if unknown).
       decideBySize(img);
     });
     tagCaptions(root);

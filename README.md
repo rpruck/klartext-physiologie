@@ -52,12 +52,15 @@ figures loaded from the live site, and both real data tables. On top of that:
 All settings persist to `localStorage` and re-apply on reload.
 
 ### Study interactions
-- **Figures** — click one to open the **preview**, where you can **zoom with the scroll wheel or the
+- **Figures** — only the informative scientific illustrations are kept (decorative icons, dots,
+  spacers and arrow/label graphics are hidden; navigation button-images become clean text links).
+  Click a figure to open the **preview**, where you can **zoom with the scroll wheel or the
   − / + buttons** (double-click toggles zoom, drag to pan, click the % to reset). From the preview,
-  **„An den Rand heften"** docks the figure in the sticky left rail. In the rail you can **resize** a
-  figure with its **− / + buttons** (it grows to fill the margin, never into the text), **drag to
-  reorder**, **collapse** to caption-only (▾/▸), unpin one (✕), or **„Alle lösen"** to clear all.
-  Size, order and collapsed state persist.
+  **„An den Rand heften"** pins the figure as a **free-floating card**: **drag it anywhere** by its
+  bar and **resize it freely** with the corner handle — from a small margin thumbnail up to (and
+  past) the full text width, so fine labels stay readable while you scroll. The **− / +** buttons
+  step the size, **▾/▸** collapses to caption-only, and **✕** unpins (with undo). Position, size and
+  collapsed state persist per page.
 - **Highlighting** — select text → a popover offers four styles (teal / amber / rose / underline).
   **Right-click any existing highlight** for a context menu to **change its colour or remove it**,
   or add/edit its note.
@@ -67,9 +70,9 @@ All settings persist to `localStorage` and re-apply on reload.
   it refers to. Deleting a note asks for confirmation first (and leaves the highlight intact).
 - **Undo** — deleting a highlight, a note, or unpinning figures raises a **sonner-style toast** with
   a **Rückgängig** (undo) action. Everything persists locally.
-- **Activation reveal** — on load, the reskinned page is "drawn" top→bottom behind a sweeping
-  accent line. Replay it any time with **⟲ Reveal** in the top bar. This previews the animation the
-  extension will play when it activates on a page.
+- **Activation animation** — the first time the reskin turns on in a session, the page is "drawn"
+  top→bottom behind a sweeping accent line (respects the motion setting + `prefers-reduced-motion`).
+  It plays once per session on turn-on; there is no replay control.
 
 ---
 
@@ -128,9 +131,9 @@ src/
                        #   wrap figures+captions · classify+restyle tables · strip inline cruft
   anchor.js            # content-hash blocks + W3C text-quote self-healing annotation anchoring
   ui.js / ui.css       # Shadow-DOM UI chrome (topbar, panel, rails, lightbox, popover, …)
-  tools.js             # lightbox zoom/pan · pin rail · highlights + context menu · margin notes
+  tools.js             # lightbox zoom/pan · free-floating pins · highlights + context menu · notes
   settings.js          # the ✦ Einstellungen panel + apply() (writes CSS vars on :root)
-  activate.js          # the top→bottom reveal (once per session, ⟲ replay)
+  activate.js          # the one-time top→bottom activation animation (no replay control)
   content.js / content.css   # document_end orchestrator + the light-DOM reskin stylesheet
   popup.js
 fonts/                 # bundled woff2 (EB Garamond incl. Greek, Inter, CMU, …) + LICENSES.md

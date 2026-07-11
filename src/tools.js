@@ -121,80 +121,129 @@
     lbImg.addEventListener('pointercancel', end);
   }
 
-  // ── pin rail ─────────────────────────────────────────────────────────────
+  // ── pinned figures (free-floating, draggable, freely resizable) ───────────
+  // A pin is a fixed HUD card the reader parks anywhere and sizes freely — from
+  // a thumbnail in the margin up to the full text width (and beyond) to read
+  // fine labels while scrolling the prose. Position + width persist per page.
+  const PIN_MIN = 150;
+  const pinMax = () => Math.min(1200, Math.round(window.innerWidth * 0.96));
+
+  // New pins land in the left margin, right-aligned to the text column, and are
+  // as wide as the margin comfortably allows (never the old cramped 260px cap).
+  function defaultPin() {
+    const measure = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--measure')) || 680;
+    const margin = Math.max(0, (window.innerWidth - measure) / 2);
+    const w = Math.round(Math.max(240, Math.min(400, margin - 24)));
+    const left = margin > w + 28 ? Math.round(margin - w - 20) : 16;
+    const top = 84 + (PINS.length * 26) % 260;
+    return { x: left, y: top, w: Math.max(PIN_MIN, w) };
+  }
+
+  const pinEl = (src) => qa('.pin').find((el) => decodeURIComponent(el.dataset.key) === src);
+
+  // Keep a pin's stored geometry inside the viewport (e.g. after a resize or a
+  // reload at a different window size) so it never comes back off-screen.
+  function clampGeom(p) {
+    const w = Math.max(PIN_MIN, Math.min(pinMax(), p.w || 300));
+    const x = Math.max(4, Math.min(window.innerWidth - w - 4, p.x == null ? 16 : p.x));
+    const y = Math.max(4, Math.min(window.innerHeight - 48, p.y == null ? 84 : p.y));
+    return { w, x, y };
+  }
+
   function pinFigure(fig) {
-    if (PINS.find((p) => p.src === fig.src)) return; // no dupes
-    PINS.push({ src: fig.src, cap: fig.cap || '', num: fig.num || '' });
+    const existing = pinEl(fig.src);
+    if (PINS.find((p) => p.src === fig.src)) { // already pinned → flash it, don't dupe
+      if (existing) { existing.classList.remove('flash'); void existing.offsetWidth; existing.classList.add('flash'); }
+      return;
+    }
+    PINS.push(Object.assign({ src: fig.src, cap: fig.cap || '', num: fig.num || '' }, defaultPin()));
     persist(); renderPins();
   }
+
   function renderPins() {
-    const pinRail = q('#pinRail'); if (!pinRail) return;
-    pinRail.classList.toggle('empty', PINS.length === 0);
-    const head = PINS.length
-      ? `<div class="pin-head"><span class="pin-head-title">Angeheftet · ${PINS.length}</span><button class="pin-unpin-all">Alle lösen</button></div>`
-      : '';
-    pinRail.innerHTML = head + PINS.map((p, i) =>
-      `<div class="pin${p.collapsed ? ' collapsed' : ''}" draggable="true" data-key="${encodeURIComponent(p.src)}" style="${p.w ? `width:${p.w}px` : ''}">` +
-        `<img src="${p.src}" alt="" draggable="false" onerror="this.style.minHeight='40px'">` +
+    const rail = q('#pinRail'); if (!rail) return;
+    rail.classList.toggle('empty', PINS.length === 0);
+    rail.innerHTML = PINS.map((p, i) => {
+      const g = clampGeom(p); p.x = g.x; p.y = g.y; p.w = g.w; // normalise stored geom
+      return `<figure class="pin${p.collapsed ? ' collapsed' : ''}" data-key="${encodeURIComponent(p.src)}" style="left:${g.x}px;top:${g.y}px;width:${g.w}px">` +
         `<div class="pin-bar">` +
-          `<span class="pin-grip" title="Ziehen zum Umordnen">⠿</span>` +
+          `<span class="pin-grip" title="Ziehen zum Verschieben">⠿</span>` +
           `<span class="pin-cap"></span>` +
-          `<button class="pin-zoom" data-i="${i}" data-dir="-1" title="Kleiner">−</button>` +
-          `<button class="pin-zoom" data-i="${i}" data-dir="1" title="Größer">+</button>` +
-          `<button class="pin-collapse" data-i="${i}" title="${p.collapsed ? 'Ausklappen' : 'Einklappen'}">${p.collapsed ? '▸' : '▾'}</button>` +
-          `<button class="pin-x" data-i="${i}" title="Lösen">✕</button>` +
+          `<button class="pin-btn pin-zoom" data-i="${i}" data-dir="-1" title="Kleiner">−</button>` +
+          `<button class="pin-btn pin-zoom" data-i="${i}" data-dir="1" title="Größer">+</button>` +
+          `<button class="pin-btn pin-collapse" data-i="${i}" title="${p.collapsed ? 'Ausklappen' : 'Einklappen'}">${p.collapsed ? '▸' : '▾'}</button>` +
+          `<button class="pin-btn pin-x" data-i="${i}" title="Lösen">✕</button>` +
         `</div>` +
-      `</div>`).join('');
-    // set captions as text (avoid HTML injection from live caption text)
+        `<div class="pin-body"><img src="${p.src}" alt="" draggable="false" onerror="this.classList.add('pin-broken')"></div>` +
+        `<span class="pin-resize" title="Größe ändern"></span>` +
+      `</figure>`;
+    }).join('');
+    // captions set as text (avoid HTML injection from live caption text)
     qa('.pin').forEach((el, i) => { const c = el.querySelector('.pin-cap'); if (c) c.textContent = `${PINS[i].num || ''} ${PINS[i].cap || ''}`.trim(); });
-    qa('.pin img').forEach((im, i) => im.onclick = () => { if (!PINS[i].collapsed) openLightbox(PINS[i].src, PINS[i].cap, PINS[i].num); });
-    qa('.pin-zoom').forEach((b) => b.onclick = () => resizePin(+b.dataset.i, +b.dataset.dir, b.closest('.pin')));
+    qa('.pin-body img').forEach((im, i) => im.onclick = () => { if (!PINS[i].collapsed) openLightbox(PINS[i].src, PINS[i].cap, PINS[i].num); });
+    qa('.pin-zoom').forEach((b) => b.onclick = () => stepPin(+b.dataset.i, +b.dataset.dir));
     qa('.pin-collapse').forEach((b) => b.onclick = () => { const i = +b.dataset.i; PINS[i].collapsed = !PINS[i].collapsed; persist(); renderPins(); });
     qa('.pin-x').forEach((x) => x.onclick = () => {
       const i = +x.dataset.i; const [removed] = PINS.splice(i, 1); persist(); renderPins();
       showToast('Abbildung gelöst', { actionLabel: 'Rückgängig', onAction: () => { PINS.splice(Math.min(i, PINS.length), 0, removed); persist(); renderPins(); } });
     });
-    const all = pinRail.querySelector('.pin-unpin-all');
-    if (all) all.onclick = () => {
-      const backup = PINS.slice(); PINS.length = 0; persist(); renderPins();
-      showToast('Alle Abbildungen gelöst', { actionLabel: 'Rückgängig', onAction: () => { PINS.push(...backup); persist(); renderPins(); } });
-    };
-    qa('.pin').forEach((pin) => {
-      pin.addEventListener('dragstart', (e) => { pin.classList.add('dragging'); if (e.dataTransfer) { e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', pin.dataset.key); } catch (_) {} } });
-      pin.addEventListener('dragend', () => { pin.classList.remove('dragging'); commitPinOrder(); });
+    qa('.pin').forEach((el, i) => wirePin(el, i));
+  }
+
+  // +/- buttons: quick width steps (free drag-resize lives on the corner handle).
+  function stepPin(i, dir) {
+    const p = PINS[i]; if (!p) return;
+    p.w = Math.max(PIN_MIN, Math.min(pinMax(), clampGeom(p).w + dir * 60));
+    const el = pinEl(p.src); if (el) el.style.width = p.w + 'px';
+    persist();
+  }
+
+  function wirePin(el, i) {
+    const p = PINS[i]; if (!p) return;
+    const raise = () => { qa('.pin').forEach((o) => o.style.zIndex = '40'); el.style.zIndex = '41'; };
+    el.addEventListener('pointerdown', raise, true);
+
+    // drag to move — grab anywhere on the bar except its buttons
+    const bar = el.querySelector('.pin-bar');
+    bar.addEventListener('pointerdown', (e) => {
+      if (e.target.closest('.pin-btn')) return;
+      e.preventDefault(); raise();
+      const g = clampGeom(p); const x0 = e.clientX, y0 = e.clientY, px = g.x, py = g.y;
+      el.classList.add('grabbing');
+      try { bar.setPointerCapture(e.pointerId); } catch (_) {}
+      const move = (ev) => {
+        p.x = Math.max(4, Math.min(window.innerWidth - 40, px + (ev.clientX - x0)));
+        p.y = Math.max(4, Math.min(window.innerHeight - 40, py + (ev.clientY - y0)));
+        el.style.left = p.x + 'px'; el.style.top = p.y + 'px';
+      };
+      const up = (ev) => { bar.removeEventListener('pointermove', move); el.classList.remove('grabbing'); try { bar.releasePointerCapture(ev.pointerId); } catch (_) {} persist(); };
+      bar.addEventListener('pointermove', move);
+      bar.addEventListener('pointerup', up, { once: true });
+      bar.addEventListener('pointercancel', up, { once: true });
+    });
+
+    // drag the corner handle to resize width freely; height follows the image
+    const handle = el.querySelector('.pin-resize');
+    if (handle) handle.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); e.stopPropagation(); raise();
+      const x0 = e.clientX, w0 = clampGeom(p).w;
+      el.classList.add('resizing');
+      try { handle.setPointerCapture(e.pointerId); } catch (_) {}
+      const move = (ev) => { p.w = Math.max(PIN_MIN, Math.min(pinMax(), w0 + (ev.clientX - x0))); el.style.width = p.w + 'px'; };
+      const up = (ev) => { handle.removeEventListener('pointermove', move); el.classList.remove('resizing'); try { handle.releasePointerCapture(ev.pointerId); } catch (_) {} persist(); };
+      handle.addEventListener('pointermove', move);
+      handle.addEventListener('pointerup', up, { once: true });
+      handle.addEventListener('pointercancel', up, { once: true });
     });
   }
-  function getDragAfterElement(y) {
-    const pinRail = q('#pinRail');
-    let closest = { offset: -Infinity, el: null };
-    pinRail.querySelectorAll('.pin:not(.dragging)').forEach((child) => {
-      const box = child.getBoundingClientRect(); const offset = y - box.top - box.height / 2;
-      if (offset < 0 && offset > closest.offset) closest = { offset, el: child };
+
+  // Re-clamp pins into view on window resize (no rebuild → keeps handlers).
+  function reflowPins() {
+    qa('.pin').forEach((el, i) => {
+      const p = PINS[i]; if (!p) return;
+      const g = clampGeom(p); p.x = g.x; p.y = g.y; p.w = g.w;
+      el.style.left = g.x + 'px'; el.style.top = g.y + 'px'; el.style.width = g.w + 'px';
     });
-    return closest.el;
-  }
-  function pinDragOver(e) {
-    const pinRail = q('#pinRail');
-    const dragging = pinRail.querySelector('.pin.dragging'); if (!dragging) return;
-    e.preventDefault();
-    const after = getDragAfterElement(e.clientY);
-    if (after == null) pinRail.appendChild(dragging); else pinRail.insertBefore(dragging, after);
-  }
-  function commitPinOrder() {
-    const pinRail = q('#pinRail');
-    const order = [...pinRail.querySelectorAll('.pin')].map((el) => decodeURIComponent(el.dataset.key));
-    PINS.sort((a, b) => order.indexOf(a.src) - order.indexOf(b.src));
-    persist(); renderPins();
-  }
-  function resizePin(i, dir, pin) {
-    const pinRail = q('#pinRail');
-    if (!pin || !PINS[i] || !pinRail) return;
-    const cs = getComputedStyle(pinRail);
-    const railInner = Math.round(pinRail.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
-    const cur = PINS[i].w || Math.round(pin.getBoundingClientRect().width);
-    const w = Math.max(150, Math.min(railInner, cur + dir * 46)); // grows into the margin, never the text
-    PINS[i].w = w; pin.style.width = w + 'px'; persist();
-    pin.querySelectorAll('.pin-zoom').forEach((b) => { b.disabled = (+b.dataset.dir < 0 && w <= 150) || (+b.dataset.dir > 0 && w >= railInner); });
   }
 
   // ── highlights (light-DOM marks, per-page storage, robust anchoring) ──────
@@ -405,12 +454,11 @@
     // dismissers (shadow clicks retarget to the host at document level)
     document.addEventListener('mousedown', (e) => { const inUI = e.target === PR.ui.host; if (!inUI) { hidePop(); closeCtx(); } });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hidePop(); closeCtx(); closeLightbox(); } });
-    // keep notes aligned to their marks as the page scrolls / resizes
+    // keep notes aligned to their marks as the page scrolls / resizes;
+    // re-clamp floating pins into view when the window resizes
     const relayout = () => { cancelAnimationFrame(notesRaf); notesRaf = requestAnimationFrame(layoutNotes); };
     window.addEventListener('scroll', relayout, { passive: true });
-    window.addEventListener('resize', relayout);
-    const pinRail = q('#pinRail');
-    if (pinRail) pinRail.addEventListener('dragover', pinDragOver);
+    window.addEventListener('resize', () => { relayout(); reflowPins(); });
   }
 
   function restore(page) {

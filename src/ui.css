@@ -129,47 +129,54 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
 .reset:hover { color: var(--ink); border-color: var(--accent-line); }
 .saved-note { font-family: var(--font-label); font-size: .6rem; letter-spacing: .06em; color: var(--ink-soft); margin-top: .9rem; opacity: .7; }
 
-/* ── pin rail (figures docked into the left margin) ────────────────────── */
-/* Fixed to the left of the centred reader; width tracks the margin so pins
-   never overlap the text. Collapses to nothing when the margin is too small. */
-.pr-pin-rail {
-  position: fixed;
-  left: 0; top: 4.6rem; bottom: 1rem;
-  width: clamp(0px, calc((100vw - var(--measure)) / 2 - 1.4rem), 300px);
-  padding: 0 1rem 0 clamp(.6rem, 2.2vw, 1.6rem);
-  overflow-y: auto; overflow-x: hidden;
-  pointer-events: auto;
-}
-.pr-pin-rail.empty { pointer-events: none; }
-.pin-head { display: flex; align-items: center; gap: .5rem; width: 100%; margin-bottom: .9rem; }
-.pin-head-title { flex: 1; font-family: var(--font-label); font-size: .62rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); text-align: left; }
-.pin-unpin-all { font-family: var(--font-label); font-size: .56rem; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); background: transparent; border: 1px solid var(--hair); border-radius: 999px; padding: .28rem .6rem; cursor: pointer; transition: .18s var(--ease); white-space: nowrap; }
-.pin-unpin-all:hover { color: var(--ink); border-color: var(--accent-line); background: var(--accent-tint); }
+/* ── pinned figures (free-floating, draggable, freely resizable) ─────────── */
+/* A full-viewport pass-through layer; each pin is a fixed card with its own
+   pointer events. Pins can be dragged anywhere and resized from a margin
+   thumbnail up to (and past) the text width, so labels stay readable. */
+.pr-pin-rail { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
+.pr-pin-rail.empty { display: none; }
+
 .pin {
-  position: relative; margin-bottom: 1rem; border: 1px solid var(--hair); border-radius: 10px; overflow: hidden;
-  background: color-mix(in srgb, var(--paper) 78%, #fff); box-shadow: var(--shadow); animation: pinIn .4s var(--ease);
-  width: min(260px, 100%); max-width: 100%; margin-left: auto;
+  position: fixed; pointer-events: auto; z-index: 40;
+  display: flex; flex-direction: column;
+  max-height: calc(100dvh - 12px);
+  border: 1px solid var(--hair); border-radius: 10px; overflow: hidden;
+  background: color-mix(in srgb, var(--paper) 82%, #fff);
+  box-shadow: var(--shadow); backdrop-filter: saturate(1.05) blur(2px);
+  animation: pinIn .32s var(--ease);
 }
-:host([data-bg="dark"]) .pin { background: color-mix(in srgb, var(--paper) 82%, #000); }
-@keyframes pinIn { from { opacity: 0; transform: translateX(-12px) scale(.97); } to { opacity: 1; transform: none; } }
-.pin img { width: 100%; display: block; cursor: zoom-in; }
-.pin .pin-bar { display: flex; align-items: center; gap: .4rem; padding: .35rem .5rem; border-top: 1px solid var(--hair-soft); }
-.pin .pin-cap { flex: 1; font-family: var(--font-label); font-size: .6rem; line-height: 1.3; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pin .pin-x { border: 0; background: transparent; color: var(--ink-soft); cursor: pointer; font-size: .85rem; padding: 0 .2rem; }
-.pin .pin-x:hover { color: var(--ink); }
-.pin.dragging { opacity: .4; }
-.pin-grip { cursor: grab; color: var(--ink-soft); font-size: .82rem; line-height: 1; opacity: .55; user-select: none; }
-.pin-grip:hover { opacity: 1; }
-.pin.dragging .pin-grip { cursor: grabbing; }
-.pin-zoom, .pin-collapse { border: 0; background: transparent; color: var(--ink-soft); cursor: pointer; line-height: 1; padding: 0 .18rem; }
-.pin-zoom { font-family: var(--font-label); font-size: .9rem; }
-.pin-collapse { font-size: .72rem; }
-.pin-zoom:hover, .pin-collapse:hover { color: var(--ink); }
-.pin-zoom:disabled { opacity: .3; cursor: default; }
-.pin.collapsed .pin-zoom { display: none; }
-.pin.collapsed img { display: none; }
-.pin.collapsed .pin-bar { border-top: 0; }
-.pin.collapsed .pin-cap { white-space: normal; overflow: visible; text-overflow: clip; }
+:host([data-bg="dark"]) .pin { background: color-mix(in srgb, var(--paper) 86%, #000); }
+@keyframes pinIn { from { opacity: 0; transform: scale(.97) translateY(-6px); } to { opacity: 1; transform: none; } }
+.pin.flash { animation: pinFlash .9s var(--ease); }
+@keyframes pinFlash { 0%, 100% { box-shadow: var(--shadow); } 35% { box-shadow: 0 0 0 3px var(--accent-line), var(--shadow); } }
+.pin.resizing { user-select: none; }
+
+.pin-bar {
+  display: flex; align-items: center; gap: .3rem; flex: none;
+  padding: .32rem .45rem; cursor: grab; touch-action: none;
+  border-bottom: 1px solid var(--hair-soft);
+  background: color-mix(in srgb, var(--paper) 55%, transparent);
+}
+.pin.grabbing .pin-bar { cursor: grabbing; }
+.pin-grip { color: var(--ink-soft); font-size: .82rem; line-height: 1; opacity: .5; }
+.pin-cap { flex: 1; font-family: var(--font-label); font-size: .58rem; line-height: 1.25; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pin-btn { border: 0; background: transparent; color: var(--ink-soft); cursor: pointer; line-height: 1; padding: 0 .22rem; font-size: .85rem; }
+.pin-btn.pin-collapse { font-size: .72rem; }
+.pin-btn:hover { color: var(--ink); }
+
+.pin-body { flex: 1; min-height: 24px; overflow-y: auto; overflow-x: hidden; }
+.pin-body img { width: 100%; display: block; cursor: zoom-in; }
+.pin-body img.pin-broken { min-height: 40px; background: var(--hair-soft); }
+
+.pin-resize {
+  position: absolute; right: 0; bottom: 0; width: 18px; height: 18px;
+  cursor: nwse-resize; touch-action: none;
+  background: linear-gradient(135deg, transparent 45%, var(--accent-line) 45%, var(--accent-line) 62%, transparent 62%, transparent 74%, var(--accent-line) 74%, var(--accent-line) 90%, transparent 90%);
+  border-bottom-right-radius: 10px;
+}
+.pin.collapsed .pin-body, .pin.collapsed .pin-resize { display: none; }
+.pin.collapsed .pin-bar { border-bottom: 0; }
+.pin.collapsed .pin-cap { white-space: normal; }
 
 /* ── lightbox ──────────────────────────────────────────────────────────── */
 .lightbox {
@@ -287,7 +294,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
 .confirm button.danger { background: #c0392b; border-color: #c0392b; color: #fff; }
 .confirm button.danger:hover { filter: brightness(1.06); }
 
-/* ── activation reveal — sweeps the page in top→bottom ─────────────────── */
+/* ── activation reveal — sweeps the page in top→bottom (one-time, on turn-on) ─ */
 .activate { position: fixed; inset: 0; z-index: 96; background: var(--paper); pointer-events: none; display: none; }
 .activate.run { display: block; animation: sweepCover 1.25s var(--ease) forwards; }
 .activate-line { position: fixed; left: 0; right: 0; top: 0; height: 2px; z-index: 97; pointer-events: none; display: none; background: linear-gradient(90deg, transparent, var(--accent) 18%, var(--accent) 82%, transparent); box-shadow: 0 0 18px 3px color-mix(in srgb, var(--accent) 60%, transparent); }
@@ -296,5 +303,3 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
 @keyframes sweepLine { 0% { transform: translateY(0); opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(100vh); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .activate, .activate-line { display: none !important; } }
 
-/* narrow viewports: no room for the pin rail */
-@media (max-width: 1180px) { .pr-pin-rail { display: none; } }
