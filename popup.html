@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>physiologie · reskin</title>
+  <style>
+    :root { --accent: #0e8373; --paper: #fbfbfb; --ink: #20262a; --ink-soft: #5d6b6a; --hair: rgba(25,28,30,.14); }
+    * { box-sizing: border-box; }
+    body { margin: 0; width: 268px; background: var(--paper); color: var(--ink);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    .head { display: flex; align-items: center; gap: .5rem; padding: .95rem 1rem .6rem;
+      font-size: .68rem; letter-spacing: .14em; text-transform: uppercase; color: var(--ink); border-bottom: 1px solid var(--hair); }
+    .head b { font-weight: 700; }
+    .head .sub { color: var(--ink-soft); }
+    .row { display: flex; align-items: center; justify-content: space-between; padding: .9rem 1rem; }
+    .row label { font-size: .9rem; }
+    .tog { position: relative; width: 42px; height: 24px; border: 0; border-radius: 999px; background: var(--hair); cursor: pointer; transition: background .2s; flex: none; }
+    .tog::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s; }
+    .tog[aria-pressed="true"] { background: var(--accent); }
+    .tog[aria-pressed="true"]::after { transform: translateX(18px); }
+    .hint { margin: 0; padding: .2rem 1rem 1rem; font-size: .76rem; line-height: 1.5; color: var(--ink-soft); }
+    .hint b { color: var(--ink); font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="head"><b>physiologie</b><span class="sub">· reskin</span></div>
+  <div class="row">
+    <label id="lbl" for="toggle">Reskin aktiv</label>
+    <button class="tog" id="toggle" role="switch" aria-pressed="true" aria-labelledby="lbl"></button>
+  </div>
+  <p class="hint">Öffne eine Seite auf <b>physiologie.cc</b>. Schrift, Farbe, Notizen &amp; Markierungen findest du über <b>✦&nbsp;Einstellungen</b> oben rechts auf der Seite.</p>
+  <script src="src/popup.js"></script>
+</body>
+</html>

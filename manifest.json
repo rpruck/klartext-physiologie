@@ -1,0 +1,53 @@
+{
+  "manifest_version": 3,
+  "name": "physiologie · reskin",
+  "version": "0.1.0",
+  "description": "Restyles physiologie.cc into a calm, editorial reading experience and adds study tools: highlighting, margin notes, and figure zoom/pin. Everything is stored locally.",
+  "permissions": ["storage"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_scripts": [
+    {
+      "matches": ["http://physiologie.cc/*", "http://www.physiologie.cc/*"],
+      "run_at": "document_start",
+      "css": ["src/boot.css"],
+      "js": ["src/boot.js"]
+    },
+    {
+      "matches": ["http://physiologie.cc/*", "http://www.physiologie.cc/*"],
+      "run_at": "document_end",
+      "css": ["src/content.css"],
+      "js": [
+        "src/store.js",
+        "src/anchor.js",
+        "src/fonts.js",
+        "src/reskin.js",
+        "src/ui.js",
+        "src/tools.js",
+        "src/settings.js",
+        "src/activate.js",
+        "src/content.js"
+      ]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["fonts/*", "src/ui.css"],
+      "matches": ["http://physiologie.cc/*", "http://www.physiologie.cc/*"]
+    }
+  ],
+  "action": {
+    "default_title": "physiologie · reskin",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  }
+}

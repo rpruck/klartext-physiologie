@@ -100,39 +100,49 @@ decoration, and constrain width. See `research/` for before/after screenshots.
 
 ---
 
-## From prototype → Chrome extension (planned)
+## The Chrome extension (built)
 
-The prototype's CSS and interaction JS are written to port directly into a Manifest V3 content
-script. Sketch:
+The extension now lives in this repo (Manifest V3, **Strategy A — in-place restyle**). It restyles
+the live site in place, hides decorative clutter, infers a real heading hierarchy, frames the real
+figures, promotes the yellow IMPP boxes to callouts, and mounts the full study-tool set — all
+isolated in a Shadow DOM so the site's ancient CSS and our styles can't leak into each other.
+
+### Load it (unpacked)
+
+1. Open **`chrome://extensions`** and turn on **Developer mode** (top-right).
+2. Click **Load unpacked** and select this project folder.
+3. Open any page on **http://physiologie.cc/** — the reskin draws itself in.
+4. Use **✦ Einstellungen** (top-right on the page) to tune fonts, width, colour, background, images
+   and motion. Click the toolbar icon for a global **on/off** switch.
+
+### File layout
 
 ```
-manifest.json          # MV3; matches http://physiologie.cc/*
-  content.css          # the reskin (this prototype's <style>, tag-soup-hardened with !important)
-  content.js           # classify + hide deco imgs, infer headings, wrap figures, mount tools
-  activate.js          # the top→bottom reveal animation, played once when the extension turns on
-  tools.js             # preview zoom/pan, pin rail (resize/reorder/collapse), highlight w/ right-click menu, margin notes
-  settings.js          # the ✦ Design panel — kept in full so users can tune everything to their needs
-  options.html         # the settings panel as an options/popup page
-  fonts/               # EB Garamond, CMU Serif, Inter, etc. bundled (no network)
+manifest.json          # MV3; matches http://(www.)physiologie.cc/*
+popup.html             # toolbar on/off switch
+src/
+  boot.css / boot.js   # document_start: paint paper + hide until ready (no aqua flash)
+  store.js             # chrome.storage.local wrapper (settings global · annotations per page)
+  fonts.js             # @font-face for the bundled woff2 via chrome.runtime.getURL
+  reskin.js            # wrap #pr-reader · infer headings · classify+hide deco imgs (keep nav) ·
+                       #   wrap figures+captions · classify+restyle tables · strip inline cruft
+  anchor.js            # content-hash blocks + W3C text-quote self-healing annotation anchoring
+  ui.js / ui.css       # Shadow-DOM UI chrome (topbar, panel, rails, lightbox, popover, …)
+  tools.js             # lightbox zoom/pan · pin rail · highlights + context menu · margin notes
+  settings.js          # the ✦ Einstellungen panel + apply() (writes CSS vars on :root)
+  activate.js          # the top→bottom reveal (once per session, ⟲ replay)
+  content.js / content.css   # document_end orchestrator + the light-DOM reskin stylesheet
+  popup.js
+fonts/                 # bundled woff2 (EB Garamond incl. Greek, Inter, CMU, …) + LICENSES.md
+icons/                 # 16 / 32 / 48 / 128
+PRIVACY.md             # privacy policy (nothing leaves your device)
 ```
 
-The **settings panel ships with the extension** (per request) so every reader can adjust fonts,
-width, colour, spacing and image handling. Settings + highlights + notes move from `localStorage`
-to `chrome.storage.local`. The **activation reveal** (this prototype's ⟲ Reveal) becomes the
-turn-on animation.
+Settings, highlights, notes and pins are stored locally in `chrome.storage.local` (annotations keyed
+per page). **Nothing is sent anywhere**; fonts are bundled, so the extension makes no network
+requests. A later **"Leseansicht" (reflow)** mode (Strategy B) can build on `reskin.js`'s block model.
 
-**Open decision — rendering strategy** (this is the main thing to settle before building):
-
-- **A · In-place restyle.** Keep the original DOM; inject CSS that overrides fonts/colours/width
-  and hides decoration; light JS to wrap figures and mount tools. *Safest* — every link, anchor and
-  scrap of content is preserved — but the faked heading structure and `<br>` layout only get so
-  clean.
-- **B · Reader reflow.** Parse the tag soup into a clean semantic model (exactly what this prototype
-  demonstrates) and re-render it. *Closest to the prototype's look*, but riskier: must not drop
-  content or break in-page anchors, and heading/figure detection has to be robust across all 200+
-  pages.
-- **Recommended: A now, with a "Leseansicht" (reflow) toggle later.** Ship the in-place restyle
-  first for reliability across the whole site, then add reflow as an optional mode.
+`HANDOFF.md` has the full architecture, the live-site findings, and the milestone breakdown.
 
 ---
 

@@ -1,0 +1,21 @@
+/* ══════════════════════════════════════════════════════════════════════
+   boot.css — document_start critical CSS.
+
+   Job: kill the flash of the original aqua page and paint calm paper
+   immediately, WITHOUT applying the type reskin (heading levels are inferred
+   from the ORIGINAL computed font-sizes at document_end, so the restyle must
+   not be live yet — see content.css / .pr-on).
+
+   `visibility:hidden` hides the raw page but PRESERVES layout, so
+   getComputedStyle().fontSize stays truthful during measurement.
+   The shadow-UI host lives on <html> (outside <body>) and is never hidden.
+
+   Gate: everything is released the moment <html> gets `.pr-ready`.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* Explicit html background stops the body-background propagation to the
+   canvas, so the site's inline aqua bgcolor never paints. boot.js overrides
+   this inline with the user's last-used paper colour when one is cached. */
+html:not(.pr-ready) { background: #fbfbfb !important; }
+
+html:not(.pr-ready) body { visibility: hidden !important; }

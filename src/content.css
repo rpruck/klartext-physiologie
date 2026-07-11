@@ -1,0 +1,281 @@
+/* ══════════════════════════════════════════════════════════════════════
+   content.css — the light-DOM content reskin.
+
+   Injected at document_end but INERT until <html>.pr-on (added only after
+   heading measurement, so getComputedStyle reads the site's ORIGINAL sizes).
+   Every rule is gated `html.pr-on …` and scoped to `#pr-reader`, so the
+   resets here can never reach our Shadow-DOM UI.
+
+   reskin.js strips the site's presentational cruft (font face/color/size
+   attrs + inline color/font-*), so most rules here need no !important — they
+   style a cleaned-up DOM. `!important` is used only where inline styles or UA
+   rules would otherwise win.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── design tokens (defaults; settings.apply() overrides these on :root) ── */
+html.pr-on {
+  --accent: #0e8373;
+  --paper: #fbfbfb;
+  --ink: #191c1e;
+  --ink-soft: #5a6362;
+  --measure: 680px;
+  --fs: 19px;
+  --lh: 1.68;
+  --gap: 1em;
+  --font-prose: 'EB Garamond', Georgia, serif;
+  --font-label: 'Inter', system-ui, sans-serif;
+  --font-note: 'Inter', system-ui, sans-serif;
+
+  /* derived */
+  --hair: color-mix(in srgb, var(--ink) 13%, transparent);
+  --hair-soft: color-mix(in srgb, var(--ink) 8%, transparent);
+  --accent-tint: color-mix(in srgb, var(--accent) 10%, transparent);
+  --accent-line: color-mix(in srgb, var(--accent) 40%, transparent);
+  --accent-ink: color-mix(in srgb, var(--accent) 82%, var(--ink));
+  --shadow: 0 1px 2px rgba(20, 25, 25, .05), 0 8px 24px -14px rgba(20, 25, 25, .28);
+  --ease: cubic-bezier(.22, .61, .36, 1);
+}
+
+/* ── background themes (settings.apply() sets data-bg on <html>) ───────── */
+html.pr-on[data-bg="paper"]   { --paper: #faf8f3; --ink: #20262a; --ink-soft: #5d6b6a; }
+html.pr-on[data-bg="neutral"] { --paper: #fbfbfb; --ink: #191c1e; --ink-soft: #5a6362; }
+html.pr-on[data-bg="white"]   { --paper: #ffffff; --ink: #191c1e; --ink-soft: #5a6362; }
+html.pr-on[data-bg="sepia"]   { --paper: #f3ead6; --ink: #3b3225; --ink-soft: #6f6249; }
+html.pr-on[data-bg="dark"] {
+  --paper: #17140f; --ink: #eee7db; --ink-soft: #9a9384;
+  --accent: color-mix(in srgb, #0e8373 82%, white);
+  --hair: color-mix(in srgb, var(--ink) 18%, transparent);
+  --hair-soft: color-mix(in srgb, var(--ink) 10%, transparent);
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px -14px rgba(0, 0, 0, .7);
+}
+
+/* ── page canvas ───────────────────────────────────────────────────────── */
+html.pr-on { background: var(--paper); }
+html.pr-on body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+html.pr-on[data-motion="0"] #pr-reader * { animation: none !important; transition: none !important; }
+
+/* ── reader column ─────────────────────────────────────────────────────── */
+html.pr-on #pr-reader {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: clamp(2rem, 6vh, 4rem) 1.4rem 24vh;
+  position: relative;
+  font-family: var(--font-prose);
+  font-size: var(--fs);
+  line-height: var(--lh);
+  color: var(--ink);
+  text-align: left;
+  letter-spacing: 0;
+}
+html.pr-on[data-align="justify"] #pr-reader { text-align: justify; hyphens: auto; }
+
+/* Everything inside inherits the prose face + ink; font.js stripping removes
+   the site's face/color, this cleans up whatever remains. */
+html.pr-on #pr-reader font,
+html.pr-on #pr-reader span,
+html.pr-on #pr-reader div,
+html.pr-on #pr-reader p,
+html.pr-on #pr-reader td,
+html.pr-on #pr-reader li { font-family: inherit; color: inherit; }
+
+/* neutralise legacy sizing tags so only tagged headings are large */
+html.pr-on #pr-reader big { font-size: inherit; }
+html.pr-on #pr-reader small { font-size: .82em; color: var(--ink-soft); }
+html.pr-on #pr-reader center { display: block; text-align: inherit; }
+html.pr-on #pr-reader img[align] { float: none !important; }
+html.pr-on #pr-reader [width] { max-width: 100%; }
+
+/* keep scientific notation honest */
+html.pr-on #pr-reader sub,
+html.pr-on #pr-reader sup { font-size: .75em; line-height: 0; }
+
+/* ── links ─────────────────────────────────────────────────────────────── */
+html.pr-on #pr-reader a {
+  color: var(--accent-ink);
+  text-decoration: none;
+  background-image: linear-gradient(var(--accent-line), var(--accent-line));
+  background-size: 100% 1px;
+  background-position: 0 1.08em;
+  background-repeat: no-repeat;
+}
+html.pr-on #pr-reader a:hover { background-size: 100% 2px; }
+
+/* ── inferred headings (reskin.js tags data-pr-h = 1|2|3) ──────────────── */
+html.pr-on #pr-reader [data-pr-h] {
+  font-family: var(--font-prose);
+  color: var(--ink);
+  text-align: left;
+  letter-spacing: -.005em;
+  text-wrap: balance;
+  background: none;
+}
+html.pr-on #pr-reader [data-pr-h="1"] {
+  display: block;
+  font-weight: 500;
+  font-size: 2.05em;
+  line-height: 1.16;
+  margin: .1em 0 .5em;
+}
+html.pr-on #pr-reader [data-pr-h="2"] {
+  display: block;
+  font-weight: 500;
+  font-size: 1.5em;
+  line-height: 1.24;
+  margin: 2em 0 .55em;
+}
+html.pr-on #pr-reader [data-pr-h="2"]::before {
+  content: "";
+  display: block;
+  width: 2.2rem;
+  height: 2px;
+  margin-bottom: .85rem;
+  background: var(--accent);
+  opacity: .85;
+  border-radius: 2px;
+}
+html.pr-on #pr-reader [data-pr-h="3"] {
+  display: block;
+  font-weight: 600;
+  font-size: 1.12em;
+  line-height: 1.3;
+  margin: 1.7em 0 .2em;
+  color: var(--accent-ink);
+}
+
+/* ── decorative images (hidden when hide-deco is on, the default) ───────── */
+html.pr-on[data-hidedeco="1"] #pr-reader .pr-deco { display: none !important; }
+html.pr-on #pr-reader .pr-deco { opacity: .85; vertical-align: middle; margin: 0 .15em; }
+
+/* ── chapter navigation (converted from nexttopic/previous/Kapitelübersicht) ─ */
+html.pr-on #pr-reader a.pr-nav {
+  font-family: var(--font-label);
+  font-size: .68rem;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  background: none;
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  padding: .4em .85em;
+  margin: .2em .3em .2em 0;
+  text-decoration: none;
+  display: inline-block;
+  transition: color .2s var(--ease), border-color .2s var(--ease), background .2s var(--ease);
+}
+html.pr-on #pr-reader a.pr-nav:hover {
+  color: var(--accent-ink);
+  border-color: var(--accent-line);
+  background: var(--accent-tint);
+}
+
+/* ── figures ───────────────────────────────────────────────────────────── */
+html.pr-on #pr-reader figure.pr-fig {
+  margin: 2.3em auto;
+  text-align: center;
+  max-width: 100%;
+}
+html.pr-on #pr-reader figure.pr-fig img.pr-figimg {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  cursor: zoom-in;
+  transition: transform .35s var(--ease), box-shadow .35s var(--ease), filter .35s var(--ease);
+}
+html.pr-on[data-figframe="hairline"] #pr-reader figure.pr-fig img.pr-figimg { border: 1px solid var(--hair); box-shadow: 0 1px 0 var(--hair-soft); }
+html.pr-on[data-figframe="shadow"] #pr-reader figure.pr-fig img.pr-figimg { box-shadow: var(--shadow); }
+html.pr-on[data-bg="dark"] #pr-reader figure.pr-fig img.pr-figimg { filter: brightness(.94) contrast(1.02); }
+html.pr-on #pr-reader figure.pr-fig img.pr-figimg:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+
+/* ── captions (tagged in place: "Abbildung: …" / "Nach …") ─────────────── */
+html.pr-on #pr-reader .pr-figcap {
+  display: block;
+  font-family: var(--font-label);
+  font-size: .72rem;
+  line-height: 1.5;
+  letter-spacing: .01em;
+  color: var(--ink-soft);
+  text-align: center;
+  max-width: 48ch;
+  margin: .7em auto 1.8em;
+}
+
+/* ── tables ─────────────────────────────────────────────────────────────
+   classifyTables tags three kinds; stripInline has removed every original
+   bgcolor, so the look here is entirely ours. */
+
+/* data tables (had a blue rgb(0,0,153) title/header cell) */
+html.pr-on #pr-reader table.pr-data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: .94em;
+  margin: 2.2em 0;
+}
+html.pr-on #pr-reader table.pr-data td {
+  padding: .5em .7em;
+  border-bottom: 1px solid var(--hair-soft);
+  vertical-align: top;
+  text-align: left;
+}
+html.pr-on #pr-reader table.pr-data td.pr-th {
+  font-weight: 600;
+  color: var(--accent-ink);
+  border-bottom: 1.5px solid var(--accent);
+}
+html.pr-on #pr-reader table.pr-data tr:hover td { background: var(--accent-tint); }
+
+/* yellow IMPP callouts (exam relevance) — preserved, promoted to a card */
+html.pr-on #pr-reader table.pr-impp {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2em 0;
+  border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 6%, var(--paper));
+  border-radius: 0 10px 10px 0;
+}
+html.pr-on #pr-reader table.pr-impp caption.pr-impp-cap {
+  caption-side: top;
+  text-align: left;
+  font-family: var(--font-label);
+  font-size: .6rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  padding: .9em 1.2em .1em;
+}
+html.pr-on #pr-reader table.pr-impp td { padding: .5em 1.2em 1.1em; }
+
+/* other single-cell coloured boxes → quiet note card */
+html.pr-on #pr-reader table.pr-box {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2em 0;
+  border: 1px solid var(--hair);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--ink) 3%, var(--paper));
+}
+html.pr-on #pr-reader table.pr-box td { padding: 1em 1.2em; }
+
+/* ── highlights (populated in M7; base styles kept here so marks render) ── */
+html.pr-on #pr-reader mark.hl {
+  background: transparent;
+  color: inherit;
+  border-radius: 2px;
+  padding: .02em 0;
+  cursor: pointer;
+  transition: background .15s var(--ease), box-shadow .18s var(--ease);
+}
+html.pr-on #pr-reader mark.hl.note-hover {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 34%, transparent);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+html.pr-on #pr-reader mark.hl[data-color="teal"] { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+html.pr-on #pr-reader mark.hl[data-color="amber"] { background: rgba(240, 180, 40, .30); }
+html.pr-on #pr-reader mark.hl[data-color="rose"] { background: rgba(224, 92, 120, .24); }
+html.pr-on #pr-reader mark.hl[data-color="underline"] { background: linear-gradient(var(--accent-line), var(--accent-line)) no-repeat 0 1.02em / 100% 2px; }
+html.pr-on #pr-reader mark.hl.has-note { box-shadow: 0 1.4px 0 var(--accent); }
