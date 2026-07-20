@@ -74,6 +74,8 @@ html.pr-on #pr-reader {
   letter-spacing: 0;
 }
 html.pr-on[data-align="justify"] #pr-reader { text-align: justify; hyphens: auto; }
+html.pr-on #pr-reader > *:first-child { margin-top: 0; }
+html.pr-on #pr-reader p { margin: 0 0 var(--gap); }
 
 /* Everything inside inherits the prose face + ink; font.js stripping removes
    the site's face/color, this cleans up whatever remains. */
@@ -106,8 +108,10 @@ html.pr-on #pr-reader a {
 }
 html.pr-on #pr-reader a:hover { background-size: 100% 2px; }
 
-/* ── inferred headings (reskin.js tags data-pr-h = 1|2|3) ──────────────── */
-html.pr-on #pr-reader [data-pr-h] {
+/* ── headings (reskin.js emits real <h1|h2|h3>) ────────────────────────── */
+html.pr-on #pr-reader h1,
+html.pr-on #pr-reader h2,
+html.pr-on #pr-reader h3 {
   font-family: var(--font-prose);
   color: var(--ink);
   text-align: left;
@@ -115,21 +119,19 @@ html.pr-on #pr-reader [data-pr-h] {
   text-wrap: balance;
   background: none;
 }
-html.pr-on #pr-reader [data-pr-h="1"] {
-  display: block;
+html.pr-on #pr-reader h1 {
   font-weight: 500;
   font-size: 2.05em;
   line-height: 1.16;
   margin: .1em 0 .5em;
 }
-html.pr-on #pr-reader [data-pr-h="2"] {
-  display: block;
+html.pr-on #pr-reader h2 {
   font-weight: 500;
   font-size: 1.5em;
   line-height: 1.24;
   margin: 2em 0 .55em;
 }
-html.pr-on #pr-reader [data-pr-h="2"]::before {
+html.pr-on #pr-reader h2::before {
   content: "";
   display: block;
   width: 2.2rem;
@@ -139,8 +141,7 @@ html.pr-on #pr-reader [data-pr-h="2"]::before {
   opacity: .85;
   border-radius: 2px;
 }
-html.pr-on #pr-reader [data-pr-h="3"] {
-  display: block;
+html.pr-on #pr-reader h3 {
   font-weight: 600;
   font-size: 1.12em;
   line-height: 1.3;
@@ -173,6 +174,30 @@ html.pr-on #pr-reader a.pr-nav:hover {
   border-color: var(--accent-line);
   background: var(--accent-tint);
 }
+html.pr-on #pr-reader .pr-navrow { display: flex; flex-wrap: wrap; gap: .4rem; margin: 1.6em 0; }
+
+/* ── definition / glossary lists (reskin.js emits <dl class="pr-defs">) ─── */
+html.pr-on #pr-reader dl.pr-defs {
+  margin: 1.4em 0;
+  display: grid;
+  grid-template-columns: minmax(6em, auto) 1fr;
+  column-gap: 1.1em;
+  row-gap: .35em;
+}
+html.pr-on #pr-reader dl.pr-defs dt { font-weight: 600; color: var(--accent-ink); }
+html.pr-on #pr-reader dl.pr-defs dd { margin: 0; }
+
+/* ── section rule (was the ugly default <hr>) ──────────────────────────── */
+html.pr-on #pr-reader hr {
+  border: 0;
+  height: 0;
+  border-top: 1px solid var(--hair);
+  width: 3.5rem;
+  margin: 2.4em 0;
+}
+
+/* ── anchor targets (zero-footprint <span class="pr-anchor" id>) ────────── */
+html.pr-on #pr-reader .pr-anchor { display: inline-block; width: 0; height: 0; scroll-margin-top: 1.5rem; }
 
 /* ── figures ───────────────────────────────────────────────────────────── */
 html.pr-on #pr-reader figure.pr-fig {
@@ -180,17 +205,17 @@ html.pr-on #pr-reader figure.pr-fig {
   text-align: center;
   max-width: 100%;
 }
-html.pr-on #pr-reader figure.pr-fig img.pr-figimg {
+html.pr-on #pr-reader figure.pr-fig img {
   max-width: 100%;
   height: auto;
   border-radius: 8px;
   cursor: zoom-in;
   transition: transform .35s var(--ease), box-shadow .35s var(--ease), filter .35s var(--ease);
 }
-html.pr-on[data-figframe="hairline"] #pr-reader figure.pr-fig img.pr-figimg { border: 1px solid var(--hair); box-shadow: 0 1px 0 var(--hair-soft); }
-html.pr-on[data-figframe="shadow"] #pr-reader figure.pr-fig img.pr-figimg { box-shadow: var(--shadow); }
-html.pr-on[data-bg="dark"] #pr-reader figure.pr-fig img.pr-figimg { filter: brightness(.94) contrast(1.02); }
-html.pr-on #pr-reader figure.pr-fig img.pr-figimg:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+html.pr-on[data-figframe="hairline"] #pr-reader figure.pr-fig img { border: 1px solid var(--hair); box-shadow: 0 1px 0 var(--hair-soft); }
+html.pr-on[data-figframe="shadow"] #pr-reader figure.pr-fig img { box-shadow: var(--shadow); }
+html.pr-on[data-bg="dark"] #pr-reader figure.pr-fig img { filter: brightness(.94) contrast(1.02); }
+html.pr-on #pr-reader figure.pr-fig img:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
 
 /* ── captions (tagged in place: "Abbildung: …" / "Nach …") ─────────────── */
 html.pr-on #pr-reader .pr-figcap {
@@ -206,8 +231,9 @@ html.pr-on #pr-reader .pr-figcap {
 }
 
 /* ── tables ─────────────────────────────────────────────────────────────
-   classifyTables tags three kinds; stripInline has removed every original
-   bgcolor, so the look here is entirely ours. */
+   reskin.js re-renders coloured multi-cell tables as clean <table.pr-data>
+   (with a promoted <caption> and .pr-th header cells); the look here is
+   entirely ours. */
 
 /* data tables (had a blue rgb(0,0,153) title/header cell) */
 html.pr-on #pr-reader table.pr-data {
@@ -215,6 +241,15 @@ html.pr-on #pr-reader table.pr-data {
   border-collapse: collapse;
   font-size: .94em;
   margin: 2.2em 0;
+}
+html.pr-on #pr-reader table.pr-data caption {
+  caption-side: top;
+  text-align: left;
+  font-family: var(--font-label);
+  font-size: .74rem;
+  letter-spacing: .01em;
+  color: var(--ink-soft);
+  padding-bottom: .7em;
 }
 html.pr-on #pr-reader table.pr-data td {
   padding: .5em .7em;
@@ -229,37 +264,39 @@ html.pr-on #pr-reader table.pr-data td.pr-th {
 }
 html.pr-on #pr-reader table.pr-data tr:hover td { background: var(--accent-tint); }
 
-/* yellow IMPP callouts (exam relevance) — preserved, promoted to a card */
-html.pr-on #pr-reader table.pr-impp {
-  width: 100%;
-  border-collapse: collapse;
+/* yellow IMPP callouts (exam relevance) — promoted to an accent card.
+   reskin.js emits <aside class="pr-impp"> with a <div class="pr-impp-cap">
+   kicker and re-rendered block content (paragraphs, lists) inside. */
+html.pr-on #pr-reader aside.pr-impp {
   margin: 2em 0;
+  padding: .2em 1.3em 1.1em;
   border-left: 3px solid var(--accent);
   background: color-mix(in srgb, var(--accent) 6%, var(--paper));
   border-radius: 0 10px 10px 0;
 }
-html.pr-on #pr-reader table.pr-impp caption.pr-impp-cap {
-  caption-side: top;
-  text-align: left;
+html.pr-on #pr-reader aside.pr-impp .pr-impp-cap {
   font-family: var(--font-label);
   font-size: .6rem;
   letter-spacing: .16em;
   text-transform: uppercase;
   color: var(--accent-ink);
-  padding: .9em 1.2em .1em;
+  padding: .9em 0 .2em;
 }
-html.pr-on #pr-reader table.pr-impp td { padding: .5em 1.2em 1.1em; }
+html.pr-on #pr-reader aside.pr-impp > *:last-child { margin-bottom: 0; }
+html.pr-on #pr-reader aside.pr-impp h1,
+html.pr-on #pr-reader aside.pr-impp h2,
+html.pr-on #pr-reader aside.pr-impp h3 { font-size: 1.05em; margin: .6em 0 .2em; color: var(--accent-ink); }
+html.pr-on #pr-reader aside.pr-impp h2::before { display: none; }
 
 /* other single-cell coloured boxes → quiet note card */
-html.pr-on #pr-reader table.pr-box {
-  width: 100%;
-  border-collapse: collapse;
+html.pr-on #pr-reader .pr-box {
   margin: 2em 0;
+  padding: 1em 1.3em;
   border: 1px solid var(--hair);
   border-radius: 10px;
   background: color-mix(in srgb, var(--ink) 3%, var(--paper));
 }
-html.pr-on #pr-reader table.pr-box td { padding: 1em 1.2em; }
+html.pr-on #pr-reader .pr-box > *:last-child { margin-bottom: 0; }
 
 /* ── highlights (populated in M7; base styles kept here so marks render) ── */
 html.pr-on #pr-reader mark.hl {
@@ -279,3 +316,17 @@ html.pr-on #pr-reader mark.hl[data-color="amber"] { background: rgba(240, 180, 4
 html.pr-on #pr-reader mark.hl[data-color="rose"] { background: rgba(224, 92, 120, .24); }
 html.pr-on #pr-reader mark.hl[data-color="underline"] { background: linear-gradient(var(--accent-line), var(--accent-line)) no-repeat 0 1.02em / 100% 2px; }
 html.pr-on #pr-reader mark.hl.has-note { box-shadow: 0 1.4px 0 var(--accent); }
+
+/* ── homepage hero (bespoke; reskin.js renderHome) ─────────────────────── */
+html.pr-on #pr-reader.pr-home {
+  min-height: 68vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+html.pr-on #pr-reader .pr-hero { text-align: center; max-width: 34rem; }
+html.pr-on #pr-reader .pr-hero h1 { font-size: 2.3em; line-height: 1.14; margin: 0 0 .35em; }
+html.pr-on #pr-reader .pr-hero-sub { color: var(--ink-soft); font-size: 1.12em; line-height: 1.4; margin: 0 auto 2em; max-width: 26rem; }
+html.pr-on #pr-reader .pr-hero .pr-navrow { justify-content: center; margin: 0 0 2.8em; }
+html.pr-on #pr-reader .pr-hero .pr-navrow a.pr-nav { font-size: .74rem; padding: .6em 1.2em; }
+html.pr-on #pr-reader .pr-hero figure.pr-fig { margin: 0 auto; max-width: 210px; }

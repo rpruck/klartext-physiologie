@@ -34,14 +34,12 @@
     // .pr-ready, so there's no FOIT.
     PR.fonts && PR.fonts.inject();
 
-    // 1 · Restructure the page into a centred reader column.
-    const reader = PR.reskin.wrapReader();
-
-    // 2 · Infer heading levels from the ORIGINAL computed sizes (before .pr-on).
-    PR.reskin.measureHeadings(reader);
-
-    // 3 · Classify tables/images + strip the site's presentational cruft.
-    PR.reskin.transform(reader);
+    // 1 · Extract the tag soup into a semantic block model and re-render clean
+    //     HTML into a fresh #pr-reader. Reads the site's ORIGINAL computed sizes
+    //     (body is still visibility:hidden per boot.css, .pr-on not yet added).
+    //     The homepage is all image-links with no text nav, so it gets a
+    //     bespoke hero instead of the generic reflow.
+    const reader = PR.reskin.isHome() ? PR.reskin.renderHome() : PR.reskin.reflow();
 
     // 4 · Load settings, then mount the Shadow-DOM UI (must exist before
     //     apply() reflects values into its controls).
