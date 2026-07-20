@@ -10,3 +10,10 @@ Thumbs.db
 .idea/
 *.swp
 .test/
+
+# Throwaway review/verify/prototype screenshots dropped at the repo root
+# (keep the real logo). Legit assets live under icons/, research/, fonts/.
+/*.png
+/*.jpeg
+/*.jpg
+!/physio-logo.png
