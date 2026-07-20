@@ -69,7 +69,7 @@
     root.setProperty('--lh', S.lh);
     root.setProperty('--measure', S.measure + 'px');
     root.setProperty('--gap', S.gap + 'em');
-    root.setProperty('--accent', S.accent);
+    root.setProperty('--accent-user', S.accent);
 
     const d = document.documentElement;
     d.dataset.bg = S.bg;
@@ -115,7 +115,7 @@
     $$('#bgSeg button').forEach((b) => b.onclick = () => { S.bg = b.dataset.v; save(); apply(); });
     $$('#frameSeg button').forEach((b) => b.onclick = () => { S.frame = b.dataset.v; save(); apply(); });
     $$('#swatches .cs').forEach((c) => c.onclick = () => { S.accent = c.dataset.c; save(); apply(); });
-    $('#customColor').oninput = (e) => { S.accent = e.target.value; setVar('--accent', S.accent); markSwatch(); };
+    $('#customColor').oninput = (e) => { S.accent = e.target.value; setVar('--accent-user', S.accent); markSwatch(); };
     $('#customColor').onchange = save;
     $('#hidedeco').onclick = () => { S.hidedeco = !S.hidedeco; save(); apply(); };
     $('#motion').onclick = () => { S.motion = !S.motion; save(); apply(); };

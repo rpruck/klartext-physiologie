@@ -14,7 +14,11 @@
 
 /* ── design tokens (defaults; settings.apply() overrides these on :root) ── */
 html.pr-on {
-  --accent: #0e8373;
+  /* settings.apply() writes the user's chosen accent to --accent-user; the
+     theme derives --accent from it so dark mode can lighten it (below) without
+     the inline :root value clobbering a stylesheet override. */
+  --accent-user: #0e8373;
+  --accent: var(--accent-user);
   --paper: #fbfbfb;
   --ink: #191c1e;
   --ink-soft: #5a6362;
@@ -43,7 +47,7 @@ html.pr-on[data-bg="white"]   { --paper: #ffffff; --ink: #191c1e; --ink-soft: #5
 html.pr-on[data-bg="sepia"]   { --paper: #f3ead6; --ink: #3b3225; --ink-soft: #6f6249; }
 html.pr-on[data-bg="dark"] {
   --paper: #17140f; --ink: #eee7db; --ink-soft: #9a9384;
-  --accent: color-mix(in srgb, #0e8373 82%, white);
+  --accent: color-mix(in srgb, var(--accent-user) 80%, white);
   --hair: color-mix(in srgb, var(--ink) 18%, transparent);
   --hair-soft: color-mix(in srgb, var(--ink) 10%, transparent);
   --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 10px 30px -14px rgba(0, 0, 0, .7);
