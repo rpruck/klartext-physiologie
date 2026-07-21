@@ -408,8 +408,15 @@
   }
 
   function mountReader(reader) {
-    document.body.innerHTML = '';
-    document.body.appendChild(reader);
+    // The site's <body> carries an inline background-color (plus legacy
+    // bgcolor/link attrs); inline style outranks content.css's
+    // `html.pr-on body { background: var(--paper) }` and bleeds through —
+    // invisible on light themes (the site is near-white), glaring in dark.
+    const b = document.body;
+    b.removeAttribute('style');
+    ['bgcolor', 'background', 'text', 'link', 'alink', 'vlink'].forEach((a) => b.removeAttribute(a));
+    b.innerHTML = '';
+    b.appendChild(reader);
     return reader;
   }
 

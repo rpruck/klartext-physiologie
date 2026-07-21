@@ -231,11 +231,18 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
 .hl-pop .act { font-family: var(--font-label); font-size: .6rem; letter-spacing: .08em; text-transform: uppercase; border: 0; background: transparent; color: var(--ink-soft); cursor: pointer; padding: .25rem .35rem; border-radius: 6px; }
 .hl-pop .act:hover { color: var(--ink); background: var(--accent-tint); }
 
-/* ── note gutter (fixed to the right of the reader; notes align to marks) ── */
+/* ── note gutter (hugs the text column's right edge; notes align to marks) ──
+   Anchored to the column (50% + measure/2), not the viewport edge, so notes
+   stay next to the prose on wide screens. The 2.2rem gap clears the reader's
+   1.4rem side padding. */
 .pr-note-gutter {
-  position: fixed; right: 0; top: 4.6rem; bottom: 1rem;
-  width: clamp(0px, calc((100vw - var(--measure)) / 2 - 1.4rem), 260px);
-  padding: 0 clamp(.6rem, 2.2vw, 1.6rem) 0 1rem;
+  /* Gap collapses before the note does: on a wide window it's the full 2.2rem,
+     but a wide column on a narrow window spends it on note width instead. */
+  --note-gap: clamp(.6rem, calc((100vw - var(--measure)) / 2 - 240px), 2.2rem);
+  position: fixed; top: 4.6rem; bottom: 1rem;
+  left: calc(50% + var(--measure) / 2 + var(--note-gap));
+  right: 1rem;             /* fill the rest of the margin… */
+  max-width: 280px;        /* …but never wider than a comfortable note */
   pointer-events: none;
 }
 .note {
