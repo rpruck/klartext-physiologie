@@ -76,6 +76,32 @@
     if (/^pruef/.test(b)) return 'Prüfungsfragen ›';
     return (alt && alt.trim()) || 'Weiter ›';
   }
+  /* ── chapter pager ──────────────────────────────────────────────────────
+     Every hub carries the same prev/next control, hand-authored three ways:
+     numeral and arrow inside one <a>, or split across two <a>s sharing the
+     href, in either order. The split shapes used to render as an arrow pill
+     PLUS a stray "II." text link, and the merged shape as a bare "I." with the
+     arrow dropped as deco — so the same control looked different on every
+     page. Collapse all of them to one pill per destination. */
+  // \d? because chapter X is filed as X2.htm — the only irregular one of the 18.
+  const CHAPTER_HREF = /^(x{0,3})(ix|iv|v?i{0,3})\d?\.html?$/i;
+  const ARROW_DIR = {
+    'linksblau.jpg': 'prev', 'previous.gif': 'prev',
+    'rechtsblau.jpg': 'next', 'nexttopic.gif': 'next', 'greenbutton.jpg': 'next',
+  };
+  const chapterLabel = (num, dir) => (dir === 'prev' ? '‹ Kapitel ' + num : 'Kapitel ' + num + ' ›');
+  function chapterNav(a) {
+    const href = a.getAttribute('href');
+    const m = href && CHAPTER_HREF.exec(base(href));
+    if (!m || !(m[1] || m[2])) return null;
+    const dir = [...a.querySelectorAll('img')]
+      .map((im) => ARROW_DIR[base(im.getAttribute('src')).toLowerCase()]).find(Boolean) || null;
+    // A bare numeral or an arrow is the pager; anything else is prose that
+    // happens to link to the chapter (the Prüfungsfragen index), leave it be.
+    if (!dir && !/^[ivxlc]+\.?$/i.test(norm(a.textContent))) return null;
+    return { href, dir, num: (m[1] + m[2]).toUpperCase() };
+  }
+
   function imgCounts(root) {
     const c = new Map();
     root.querySelectorAll('img').forEach((im) => { const f = base(im.getAttribute('src')).toLowerCase(); c.set(f, (c.get(f) || 0) + 1); });
@@ -156,6 +182,20 @@
 
         if (tag === 'BR') { toks.push({ k: 'br' }); continue; }
         if (tag === 'HR') { toks.push({ k: 'hr' }); continue; }
+        if (tag === 'A' && n.getAttribute('href')) {
+          const cn = chapterNav(n);
+          if (cn) {
+            // The two halves of a split pager are always adjacent siblings;
+            // whichever half carries the arrow decides the direction.
+            const last = toks[toks.length - 1];
+            if (last && last.k === 'nav' && last.href === cn.href) {
+              if (cn.dir && !last.dir) { last.dir = cn.dir; last.label = chapterLabel(cn.num, cn.dir); }
+            } else {
+              toks.push({ k: 'nav', href: cn.href, label: chapterLabel(cn.num, cn.dir), dir: cn.dir });
+            }
+            continue; // never walk in — the numeral and the arrow are the pill
+          }
+        }
         if (tag === 'IMG') {
           const c = classifyImg(n, counts);
           if (c.kind === 'fig') toks.push({ k: 'fig', ...c });
@@ -226,6 +266,7 @@
     const lineMaxSize = (l) => l.runs.reduce((m, r) => Math.max(m, r.st && r.st.size || baseline), 0);
     const lineBold = (l) => { const p = l.runs.filter((r) => r.text.trim()); return p.length && p.every((r) => r.st && r.st.b); };
     const lineAnchors = (l) => (l.runs || []).filter((r) => r.anchor).map((r) => r.anchor);
+    const lineLinked = (l) => { const p = (l.runs || []).filter((r) => (r.text || '').trim()); return p.length > 0 && p.every((r) => r.st && r.st.href); };
     const isGloss = (l) => l.runs && GLOSS.test(lineText(l)) && lineText(l).length <= 200;
     const glossFlag = lines.map((l) => !l.special && isGloss(l));
 
@@ -237,6 +278,9 @@
       const sz = lineMaxSize(l), bold = lineBold(l);
       const big = sz >= baseline * 1.12;
       if (!big && !bold) return 0;
+      // The hubs set their section index in bold; a line that is nothing but a
+      // link is a TOC entry, not a heading. Only size still promotes it.
+      if (!big && lineLinked(l)) return 0;
       if (/[.!?]\s+\S/.test(txt)) return 0;                  // reads like a full sentence
       if (sz >= baseline * 1.7) return 1;
       if (sz >= baseline * 1.32) return 2;
@@ -258,7 +302,7 @@
         flushGroups();
         const s = l.special, anchors = drain();
         if (s.k === 'fig') blocks.push({ t: 'fig', src: s.src, w: s.w, h: s.h, alt: s.alt, cap: '', anchors });
-        else if (s.k === 'nav') blocks.push({ t: 'nav', href: s.href, label: s.label, anchors });
+        else if (s.k === 'nav') blocks.push({ t: 'nav', href: s.href, label: s.label, dir: s.dir, anchors });
         else if (s.k === 'hr') blocks.push({ t: 'hr', anchors });
         else if (s.k === 'table') blocks.push({ t: 'table', kind: s.kind, el: s.el, anchors });
         continue;
@@ -283,6 +327,14 @@
       para.runs.push(...l.runs);
     }
     flushGroups();
+
+    // The hubs paint the pager as "prev · TITLE · next", which lands a lone
+    // pill above the heading and another below — two controls where there is
+    // one. Fold the leading pill down past the title so both halves end up
+    // adjacent and renderBlocks gathers them into a single row.
+    for (let i = 0; i < blocks.length - 1; i++) {
+      if (blocks[i].t === 'nav' && blocks[i].dir && blocks[i + 1].t === 'h') blocks.splice(i + 1, 0, blocks.splice(i, 1)[0]);
+    }
 
     // Chapter indexes (Prüfungsfragen, the hub pages) are just runs of lines
     // that hold nothing but a link. As prose paragraphs they get full leading

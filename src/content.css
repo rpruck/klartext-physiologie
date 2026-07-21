@@ -191,6 +191,8 @@ html.pr-on #pr-reader .pr-linklist {
   line-height: 1.4;
 }
 html.pr-on #pr-reader .pr-linklist p { margin: 0; }
+/* the hubs bold their index, Pruef.htm doesn't — read as one list either way */
+html.pr-on #pr-reader .pr-linklist strong { font-weight: inherit; }
 
 /* ── definition / glossary lists (reskin.js emits <dl class="pr-defs">) ─── */
 html.pr-on #pr-reader dl.pr-defs {
