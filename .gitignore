@@ -2,7 +2,8 @@
 .DS_Store
 Thumbs.db
 
-# Playwright MCP scratch output
+# Playwright MCP scratch output — the one sink for throwaway screenshots.
+# Prune it freely; anything worth keeping gets promoted to research/.
 .playwright-mcp/
 
 # Editor
@@ -20,9 +21,8 @@ dev/*
 # Superseded Strategy-B prototype (src/ is the source of truth now)
 proto/
 
-# Throwaway review/verify/prototype screenshots dropped at the repo root
-# (keep the real logo). Legit assets live under icons/, research/, fonts/.
+# Backstop: no image belongs at the repo root. Real assets live under icons/,
+# research/ and fonts/; throwaway screenshots stay in .playwright-mcp/.
 /*.png
 /*.jpeg
 /*.jpg
-!/physio-logo.png

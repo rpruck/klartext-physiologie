@@ -98,6 +98,13 @@ memory, `reskin-testing`):
   `location.pathname` stays `/dev/…`, so a page never records itself as read; `isHome()` keys on
   `location.pathname`, so the homepage is only exercised via a real `/` path.
 
+### Screenshots
+
+Verification shots are throwaway: let the Playwright MCP name them into `.playwright-mcp/`
+(gitignored) rather than passing a filename — the repo root is ignored for images precisely because
+they used to pile up there. A shot only earns a place in `research/` (tracked) if it documents a
+visual decision worth re-reading later, named `before-*` / `after-*`.
+
 ## Conventions
 
 - Content scripts are plain IIFEs on the shared `PR` namespace — no bundler, no modules.
