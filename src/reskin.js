@@ -284,6 +284,23 @@
     }
     flushGroups();
 
+    // Chapter indexes (Prüfungsfragen, the hub pages) are just runs of lines
+    // that hold nothing but a link. As prose paragraphs they get full leading
+    // and a 16-entry index runs past the bottom of the viewport, so tag runs of
+    // them for renderBlocks to gather into one tight list.
+    const isLinkOnly = (b) => {
+      if (b.t !== 'p') return false;
+      const words = b.runs.filter((r) => (r.text || '').trim());
+      return words.length > 0 && words.every((r) => r.st && r.st.href) &&
+        norm(b.runs.map((r) => r.text).join('')).length <= 120;
+    };
+    for (let i = 0; i < blocks.length; i++) {
+      if (!isLinkOnly(blocks[i])) continue;
+      let j = i; while (j < blocks.length && isLinkOnly(blocks[j])) j++;
+      if (j - i >= 3) for (let k = i; k < j; k++) blocks[k].linkitem = true;
+      i = j - 1;
+    }
+
     // attach "Abbildung/Nach/©" caption paragraphs to the figure above.
     const CAP = /^\s*(Abbildung|Abb\.|Abb\b|Nach\s|Fig\.|©)/;
     for (let i = 0; i < blocks.length; i++) {
@@ -366,18 +383,33 @@
   function emitAnchors(frag, ids, seen) {
     for (const id of ids || []) { if (!id || seen.has(id)) continue; seen.add(id); const s = document.createElement('span'); s.className = 'pr-anchor'; s.id = id; frag.appendChild(s); }
   }
+  // Direction is only ever encoded in the label's arrow (navLabel bakes it in).
+  const navRank = (label) => (/^\s*‹/.test(label) ? 0 : /›\s*$/.test(label) ? 2 : 1);
+
   function renderBlocks(blocks, counts, baseline, seen) {
     seen = seen || new Set();
     const frag = document.createDocumentFragment();
-    let navGroup = null;
+    let navGroup = null, linkList = null;
     for (const b of blocks) {
       if (b.t === 'nav') {
+        linkList = null;
         emitAnchors(frag, b.anchors, seen);
         if (!navGroup) { navGroup = document.createElement('nav'); navGroup.className = 'pr-navrow'; frag.appendChild(navGroup); }
-        const a = document.createElement('a'); a.className = 'pr-nav'; a.href = b.href; a.textContent = b.label; navGroup.appendChild(a);
+        const a = document.createElement('a'); a.className = 'pr-nav'; a.href = b.href; a.textContent = b.label;
+        // The source usually paints "Weiter" left of "Zurück"; sort into pager
+        // order instead (back · everything else · forward), stably.
+        const rank = navRank(b.label);
+        navGroup.insertBefore(a, [...navGroup.children].find((c) => navRank(c.textContent) > rank) || null);
         continue;
       }
       navGroup = null;
+      if (b.t === 'p' && b.linkitem) {
+        emitAnchors(frag, b.anchors, seen);
+        if (!linkList) { linkList = document.createElement('nav'); linkList.className = 'pr-linklist'; frag.appendChild(linkList); }
+        const p = document.createElement('p'); p.innerHTML = renderRuns(b.runs); linkList.appendChild(p);
+        continue;
+      }
+      linkList = null;
       emitAnchors(frag, b.anchors, seen);
       if (b.t === 'h') { const h = document.createElement('h' + b.level); h.innerHTML = renderRuns(b.runs); frag.appendChild(h); }
       else if (b.t === 'p') { const p = document.createElement('p'); p.innerHTML = renderRuns(b.runs); if (norm(p.textContent) || p.querySelector('[id]')) frag.appendChild(p); }

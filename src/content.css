@@ -180,6 +180,18 @@ html.pr-on #pr-reader a.pr-nav:hover {
 }
 html.pr-on #pr-reader .pr-navrow { display: flex; flex-wrap: wrap; gap: .4rem; margin: 1.6em 0; }
 
+/* ── chapter index (runs of link-only lines, tagged `linkitem` by reskin.js) ─
+   Paragraph leading turns a 16-entry index into two screenfuls; this reads as
+   one list instead. */
+html.pr-on #pr-reader .pr-linklist {
+  display: flex;
+  flex-direction: column;
+  gap: .3em;
+  margin: 1.4em 0;
+  line-height: 1.4;
+}
+html.pr-on #pr-reader .pr-linklist p { margin: 0; }
+
 /* ── definition / glossary lists (reskin.js emits <dl class="pr-defs">) ─── */
 html.pr-on #pr-reader dl.pr-defs {
   margin: 1.4em 0;

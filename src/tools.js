@@ -386,7 +386,11 @@
     const withNotes = HLS().filter((h) => h.note != null); // null = none, '' = empty-but-open
     gutter.querySelectorAll('.note').forEach((n) => { if (!withNotes.find((h) => h.id === n.dataset.id)) n.remove(); });
     const gutterTop = gutter.getBoundingClientRect().top; // fixed → viewport coords
-    let lastBottom = 0;
+    // -Infinity, not 0: clamping to the gutter top made every note whose mark
+    // had scrolled off pile up there, and on a page with many notes that stack
+    // buried the ones belonging to marks actually on screen. Notes now travel
+    // with their marks and are clipped by the gutter's overflow.
+    let lastBottom = -Infinity;
     withNotes
       .map((h) => ({ h, mark: document.querySelector('#pr-reader mark.hl[data-hid="' + h.id + '"]') }))
       .filter((o) => o.mark)

@@ -244,6 +244,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
   right: 1rem;             /* fill the rest of the margin… */
   max-width: 280px;        /* …but never wider than a comfortable note */
   pointer-events: none;
+  overflow: hidden;        /* notes scroll out with their marks, not onto the topbar */
 }
 .note {
   position: absolute; left: 0; right: 0; width: auto; pointer-events: auto;
