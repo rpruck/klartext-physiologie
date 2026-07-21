@@ -470,7 +470,6 @@
     }
     const wrap = document.createElement(kind === 'impp' ? 'aside' : 'div');
     wrap.className = kind === 'impp' ? 'pr-impp' : 'pr-box';
-    if (kind === 'impp') { const k = document.createElement('div'); k.className = 'pr-impp-cap'; k.textContent = 'IMPP · prüfungsrelevant'; wrap.appendChild(k); }
     wrap.appendChild(renderBlocks(assemble(tokenize(el, counts, baseline), baseline), counts, baseline));
     return wrap;
   }
