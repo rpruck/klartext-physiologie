@@ -64,7 +64,7 @@ Key files:
 | `src/tools.js` | Study interactions (highlight / notes / pins / lightbox) |
 | `src/anchor.js` | Self-healing annotation anchoring — the biggest correctness surface |
 | `src/store.js` | `chrome.storage.local` wrapper + a tiny synchronous localStorage mirror for `boot.js` |
-| `src/visited.js` | Records pages read (storage key `visited`) and tags links to them `.pr-seen` |
+| `src/visited.js` | Records pages read (storage key `visited`) and tags links to them `.pr-seen`; off (record and all) when the `progress` setting is false, which content.css also gates the markers on via `html.pr-on[data-progress="1"]` |
 | `src/fonts.js` | Registers the bundled woff2 faces from `fonts/` |
 | `popup.html` / `src/popup.js` | Toolbar on/off switch |
 

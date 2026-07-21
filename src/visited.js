@@ -46,8 +46,12 @@
     });
   }
 
+  // Off (Einstellungen → "Gelesenes markieren") means off: no marker, and no
+  // record either, so nothing accrues while the reader isn't asking for it.
+  const tracking = () => !(PR.settings && PR.settings.get().progress === false);
+
   async function apply(root) {
-    if (!PR.store || !root) return;
+    if (!PR.store || !root || !tracking()) return;
     const seen = (await PR.store.get(KEY)) || {};
     tag(root, seen);
     await record(seen);

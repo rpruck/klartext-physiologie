@@ -113,11 +113,13 @@ html.pr-on #pr-reader a {
 html.pr-on #pr-reader a:hover { background-size: 100% 2px; }
 /* already read (visited.js tags these): the rule recedes to a hairline, so a
    page you've been to reads as settled rather than pending. Hover still brings
-   the accent back — nothing here should feel dead. */
-html.pr-on #pr-reader a.pr-seen {
+   the accent back — nothing here should feel dead. Every read marker is gated
+   on data-progress, so switching tracking off hides the ones already on the
+   page without a reload. */
+html.pr-on[data-progress="1"] #pr-reader a.pr-seen {
   background-image: linear-gradient(var(--hair), var(--hair));
 }
-html.pr-on #pr-reader a.pr-seen:hover {
+html.pr-on[data-progress="1"] #pr-reader a.pr-seen:hover {
   background-image: linear-gradient(var(--accent-line), var(--accent-line));
 }
 
@@ -188,7 +190,7 @@ html.pr-on #pr-reader a.pr-nav:hover {
   background: var(--accent-tint);
 }
 /* a pill you've already followed carries the same dot the index uses */
-html.pr-on #pr-reader a.pr-nav.pr-seen::before {
+html.pr-on[data-progress="1"] #pr-reader a.pr-nav.pr-seen::before {
   content: "";
   display: inline-block;
   width: 4px;
@@ -199,7 +201,7 @@ html.pr-on #pr-reader a.pr-nav.pr-seen::before {
   vertical-align: .12em;
   margin-right: .55em;
 }
-html.pr-on #pr-reader a.pr-nav.pr-seen:hover::before { opacity: .9; }
+html.pr-on[data-progress="1"] #pr-reader a.pr-nav.pr-seen:hover::before { opacity: .9; }
 html.pr-on #pr-reader .pr-navrow { display: flex; flex-wrap: wrap; gap: .4rem; margin: 1.6em 0; }
 
 /* ── chapter / section eyebrow (reskin.js renderCrumb) ──────────────────
@@ -269,7 +271,7 @@ html.pr-on #pr-reader .pr-linknum {
    grid. Offsets are in the number's em (half the .85em column gap, half its
    1.85 line-height) so they track the reader's font size. Only where there IS
    a number to hang it on; elsewhere the receded underline carries it alone. */
-html.pr-on #pr-reader .pr-linklist p:has(a.pr-seen) > .pr-linknum::after {
+html.pr-on[data-progress="1"] #pr-reader .pr-linklist p:has(a.pr-seen) > .pr-linknum::after {
   content: "";
   position: absolute;
   right: calc(-.575em - 2px);

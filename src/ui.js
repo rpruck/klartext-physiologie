@@ -162,6 +162,13 @@
           </div>
         </div>
         <div class="group">
+          <span class="g-label">Lesefortschritt</span>
+          <div class="field toggle">
+            <label for="progress">Gelesenes markieren</label>
+            <button class="sw-toggle" id="progress" aria-pressed="true"></button>
+          </div>
+        </div>
+        <div class="group">
           <span class="g-label">Bewegung</span>
           <div class="field toggle">
             <label for="motion">Animationen</label>

@@ -53,6 +53,7 @@
     } else {
       d.dataset.bg = 'neutral'; d.dataset.align = 'justify';
       d.dataset.hidedeco = '1'; d.dataset.figframe = 'hairline'; d.dataset.motion = '1';
+      d.dataset.progress = '1';
     }
 
     // 6 · Turn the reskin on (CSS was inert until now).

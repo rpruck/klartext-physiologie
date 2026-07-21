@@ -38,7 +38,7 @@
   const DEFAULTS = {
     proseFont: 'eb', labelFont: 'inter-label', noteFont: 'inter', fs: 19, lh: 1.68,
     measure: 680, gap: 1.0, align: 'justify', accent: '#0e8373',
-    bg: 'neutral', hidedeco: true, frame: 'hairline', motion: true,
+    bg: 'neutral', hidedeco: true, frame: 'hairline', motion: true, progress: true,
   };
   const PAPER = { neutral: '#fbfbfb', paper: '#faf8f3', white: '#ffffff', sepia: '#f3ead6', dark: '#17140f' };
 
@@ -77,6 +77,7 @@
     d.dataset.figframe = S.frame;
     d.dataset.motion = S.motion ? '1' : '0';
     d.dataset.align = S.align;
+    d.dataset.progress = S.progress ? '1' : '0';   // content.css gates .pr-seen on this
     if (PR.ui && PR.ui.host) PR.ui.host.dataset.bg = S.bg; // let shadow CSS theme
 
     // reflect into shadow controls (if the UI is mounted)
@@ -91,6 +92,7 @@
       $('#customColor').value = S.accent;
       setSeg('#alignSeg', S.align); setSeg('#bgSeg', S.bg); setSeg('#frameSeg', S.frame);
       setToggle('#hidedeco', S.hidedeco); setToggle('#motion', S.motion);
+      setToggle('#progress', S.progress);
       markSwatch();
     }
     PR.tools && PR.tools.layoutNotes && PR.tools.layoutNotes();
@@ -119,8 +121,15 @@
     $('#customColor').onchange = save;
     $('#hidedeco').onclick = () => { S.hidedeco = !S.hidedeco; save(); apply(); };
     $('#motion').onclick = () => { S.motion = !S.motion; save(); apply(); };
-    $('#resetBtn').onclick = () => { S = { ...DEFAULTS }; save(); apply(); };
+    $('#progress').onclick = () => { S.progress = !S.progress; save(); apply(); retag(); };
+    $('#resetBtn').onclick = () => { S = { ...DEFAULTS }; save(); apply(); retag(); };
     wireForget();
+  }
+
+  // Tracking just came (back) on: the open reader was never tagged and this
+  // visit never recorded, so do both now rather than waiting for a reload.
+  function retag() {
+    if (S.progress && PR.visited) PR.visited.apply(document.getElementById('pr-reader'));
   }
 
   // Dropping the read history can't be undone — you'd have to re-walk the book
