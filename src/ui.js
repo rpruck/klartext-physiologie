@@ -169,7 +169,10 @@
           </div>
         </div>
         <div class="panel-foot">
-          <button class="reset" id="resetBtn">↺ Zurücksetzen</button>
+          <div class="foot-row">
+            <button class="reset" id="resetBtn">↺ Zurücksetzen</button>
+            <button class="reset" id="forgetBtn" data-label="• Gelesenes vergessen">• Gelesenes vergessen</button>
+          </div>
           <div class="saved-note">Einstellungen &amp; Notizen werden lokal gespeichert.</div>
         </div>
       </div>

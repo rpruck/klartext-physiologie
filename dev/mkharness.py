@@ -24,7 +24,8 @@ stub = '''<script>
     set(obj, cb) { for (const k in obj) localStorage.setItem(K(k), JSON.stringify(obj[k])); cb && cb(); },
     remove(key, cb) { localStorage.removeItem(K(key)); cb && cb(); },
   }, onChanged: { addListener() {} } };
-  chrome.runtime = chrome.runtime || { getURL: (p) => 'BASE_/' + p };
+  // same cache-buster as the <script>/<link> tags, so an edited ui.css lands
+  chrome.runtime = chrome.runtime || { getURL: (p) => 'BASE_/' + p + '?v=V_' };
   const seen = new URLSearchParams(location.search).get('seen');
   if (seen !== null) {
     const rec = {};
@@ -33,7 +34,7 @@ stub = '''<script>
   }
 })();
 </script>
-'''.replace('BASE_', BASE)
+'''.replace('BASE_', BASE).replace('V_', str(V))
 harness = f'''<!doctype html><html lang="de"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <base href="http://physiologie.cc/">

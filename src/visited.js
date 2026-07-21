@@ -53,5 +53,14 @@
     await record(seen);
   }
 
-  PR.visited = { apply, tag, record };
+  // Forget everything (Einstellungen → "Gelesenes vergessen"). Strips the
+  // markers from the open page too, so the panel's effect is visible at once —
+  // this page re-records itself on its next load, not now.
+  async function clear() {
+    if (!PR.store) return;
+    await PR.store.remove(KEY);
+    document.querySelectorAll('#pr-reader a.pr-seen').forEach((a) => a.classList.remove('pr-seen'));
+  }
+
+  PR.visited = { apply, tag, record, clear };
 })();

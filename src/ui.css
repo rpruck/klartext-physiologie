@@ -127,6 +127,9 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
 .panel-foot { margin-top: .5rem; padding-top: 1.2rem; border-top: 1px solid var(--hair-soft); }
 .reset { font-family: var(--font-label); font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-soft); background: transparent; border: 1px solid var(--hair); border-radius: 999px; padding: .5rem .9rem; cursor: pointer; }
 .reset:hover { color: var(--ink); border-color: var(--accent-line); }
+.foot-row { display: flex; flex-wrap: wrap; gap: .45rem; }
+/* armed = one click in, waiting for the confirming second */
+.reset.armed { color: var(--accent-ink); border-color: var(--accent-line); background: var(--accent-tint); }
 .saved-note { font-family: var(--font-label); font-size: .6rem; letter-spacing: .06em; color: var(--ink-soft); margin-top: .9rem; opacity: .7; }
 
 /* ── pinned figures (free-floating, draggable, freely resizable) ─────────── */

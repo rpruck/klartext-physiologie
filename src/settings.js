@@ -120,6 +120,31 @@
     $('#hidedeco').onclick = () => { S.hidedeco = !S.hidedeco; save(); apply(); };
     $('#motion').onclick = () => { S.motion = !S.motion; save(); apply(); };
     $('#resetBtn').onclick = () => { S = { ...DEFAULTS }; save(); apply(); };
+    wireForget();
+  }
+
+  // Dropping the read history can't be undone — you'd have to re-walk the book
+  // to rebuild it — so the button arms on the first click and forgets it was
+  // asked after a few seconds. Not a setting, but this is where the panel's
+  // controls get wired.
+  function wireForget() {
+    const b = $('#forgetBtn');
+    if (!b) return;
+    const idle = () => { b.classList.remove('armed'); b.textContent = b.dataset.label; };
+    let armed = null;
+    b.onclick = async () => {
+      if (!armed) {
+        b.classList.add('armed');
+        b.textContent = 'Wirklich? Nochmal klicken';
+        armed = setTimeout(() => { armed = null; idle(); }, 5000);
+        return;
+      }
+      clearTimeout(armed); armed = null;
+      if (PR.visited) await PR.visited.clear();
+      b.classList.remove('armed');
+      b.textContent = 'Gelöscht ✓';
+      setTimeout(idle, 2000);
+    };
   }
 
   PR.settings = {
