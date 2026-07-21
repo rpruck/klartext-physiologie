@@ -13,9 +13,9 @@ The site is 1990s-era hand-authored HTML (latin-1, `<font>`/`bgcolor`/`<br>` tag
 encoded only visually). The extension does not restyle it in place — it **extracts and re-renders**
 (see below).
 
-`README.md` and `HANDOFF.md` predate the extension (they describe the original design prototype in
-`prototype.html` and a not-yet-built extension). The shipping code lives in `src/` and is the source
-of truth; treat those two docs as historical.
+The shipping code lives in `src/` and is the source of truth; `README.md` is the user-facing
+overview. `prototype.html` (+ `serve.command`) is the pre-extension design prototype — kept for
+reference, never a description of what ships.
 
 ## Rendering strategy — "Strategy B" (extract & re-render)
 
