@@ -1,4 +1,4 @@
-# physiologie · reskin
+# Klartext Physiologie
 
 A reskin of **[physiologie.cc](http://physiologie.cc/)** — Hinghofer-Szalkay's *Reise durch die
 Physiologie* — inspired by the calm, editorial feel of **[makingsoftware.com](https://www.makingsoftware.com/)**.

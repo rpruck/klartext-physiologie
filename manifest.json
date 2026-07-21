@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "physiologie · reskin",
+  "name": "Klartext Physiologie",
   "version": "0.1.0",
   "description": "Restyles physiologie.cc into a calm, editorial reading experience and adds study tools: highlighting, margin notes, and figure zoom/pin. Everything is stored locally.",
   "permissions": ["storage"],
@@ -42,7 +42,7 @@
     }
   ],
   "action": {
-    "default_title": "physiologie · reskin",
+    "default_title": "Klartext Physiologie",
     "default_popup": "popup.html",
     "default_icon": {
       "16": "icons/icon16.png",

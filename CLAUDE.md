@@ -4,7 +4,7 @@ Guidance for working in this repo. Keep it current when the architecture shifts.
 
 ## What this is
 
-A **Chrome MV3 browser extension** that reskins **[physiologie.cc](http://physiologie.cc/)**
+**Klartext Physiologie** — a **Chrome MV3 browser extension** that reskins **[physiologie.cc](http://physiologie.cc/)**
 (Hinghofer-Szalkay's *Reise durch die Physiologie*) into a calm, editorial reading experience and
 adds local study tools: highlighting, margin notes, and figure zoom/pin. Everything is stored
 locally (`chrome.storage.local`); the extension makes no network calls of its own.

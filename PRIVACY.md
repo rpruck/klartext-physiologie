@@ -1,8 +1,8 @@
-# Privacy Policy — physiologie · reskin
+# Privacy Policy — Klartext Physiologie
 
 _Last updated: 2026-07-11_
 
-**physiologie · reskin** is a browser extension that restyles pages on
+**Klartext Physiologie** is a browser extension that restyles pages on
 `physiologie.cc` and adds local study tools (highlighting, margin notes,
 figure pinning, appearance settings).
 
