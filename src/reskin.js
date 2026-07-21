@@ -71,6 +71,16 @@
     const h = parseInt(img.getAttribute('height'), 10) || styleDim('height') || img.naturalHeight || 0;
     return [w, h];
   }
+  /* The declared box is the site's 1990s layout hint, not the picture's own
+     size: the hubs float a 631×407 scan beside the section list at 200×129,
+     and a handful of in-text figures are halved the same way. In a 680px
+     reading column that reads as a stamp. Show the scan at its own resolution
+     instead — the attributes stay as the pre-load box reservation, and the
+     column (max-width:100%) still caps it, so we never upscale past 1:1. */
+  function fitNatural(im, declaredW) {
+    const grow = () => { if (im.naturalWidth > declaredW) { im.width = im.naturalWidth; im.height = im.naturalHeight; } };
+    if (im.complete && im.naturalWidth) grow(); else im.addEventListener('load', grow, { once: true });
+  }
   function isPageLink(href) {
     if (!href || href[0] === '#') return false;
     if (/^(mailto|javascript):/i.test(href) || /^https?:\/\//i.test(href) || href.includes('#')) return false;
@@ -526,6 +536,7 @@
       else if (b.t === 'fig') {
         const fig = document.createElement('figure'); fig.className = 'pr-fig';
         const im = document.createElement('img'); im.src = b.src; if (b.w) im.width = b.w; if (b.h) im.height = b.h; im.loading = 'lazy'; im.alt = b.alt || '';
+        fitNatural(im, b.w || 0);
         fig.appendChild(im);
         if (b.cap) { const fc = document.createElement('figcaption'); fc.className = 'pr-figcap'; fc.textContent = b.cap; fig.appendChild(fc); }
         frag.appendChild(fig);
