@@ -102,10 +102,17 @@ html.pr-on #pr-reader sub,
 html.pr-on #pr-reader sup { font-size: .75em; line-height: 0; }
 
 /* ── links ─────────────────────────────────────────────────────────────── */
+/* The underline is painted as a background gradient, so its colour rides on
+   --rule rather than being restated per state. Chrome that opts out of the
+   underline (.pr-nav, .pr-crumb-up, .pr-author) does it with `background: none`
+   — and a later rule re-setting background-image would beat that reset and
+   flood the whole element, since the reset also drops background-size to auto.
+   Recolouring only the variable keeps that impossible. */
 html.pr-on #pr-reader a {
+  --rule: var(--accent-line);
   color: var(--accent-ink);
   text-decoration: none;
-  background-image: linear-gradient(var(--accent-line), var(--accent-line));
+  background-image: linear-gradient(var(--rule), var(--rule));
   background-size: 100% 1px;
   background-position: 0 1.08em;
   background-repeat: no-repeat;
@@ -116,12 +123,8 @@ html.pr-on #pr-reader a:hover { background-size: 100% 2px; }
    the accent back — nothing here should feel dead. Every read marker is gated
    on data-progress, so switching tracking off hides the ones already on the
    page without a reload. */
-html.pr-on[data-progress="1"] #pr-reader a.pr-seen {
-  background-image: linear-gradient(var(--hair), var(--hair));
-}
-html.pr-on[data-progress="1"] #pr-reader a.pr-seen:hover {
-  background-image: linear-gradient(var(--accent-line), var(--accent-line));
-}
+html.pr-on[data-progress="1"] #pr-reader a.pr-seen { --rule: var(--hair); }
+html.pr-on[data-progress="1"] #pr-reader a.pr-seen:hover { --rule: var(--accent-line); }
 
 /* ── headings (reskin.js emits real <h1|h2|h3>) ────────────────────────── */
 html.pr-on #pr-reader h1,
