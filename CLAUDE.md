@@ -28,6 +28,17 @@ image-only landing page gets a bespoke hero (`renderHome()`).
 
 Entry points: `PR.reskin.isHome() ? PR.reskin.renderHome() : PR.reskin.reflow()`.
 
+### Where-am-I (chapter / section)
+
+Nothing in a page's content states its place in the book, so `pageRef()` derives it from the URL
+(`I.htm` hub · `I.1.htm` section · `IV.5A.htm` annex · `X2.htm` — chapter X's irregular hub name)
+against the curated `CHAPTERS` table (titles copied verbatim from `Pruef.htm`). `reflow()` then emits
+an eyebrow above the title (`renderCrumb`/`mountCrumb`: *Kapitel VIII · Respirationssystem… ·
+Abschnitt 2*, linking up to the hub) and numbers index entries (`numberIndex`). Chapter I is the only
+0-based chapter (`I.0` is its introduction) — `ordinal()` normalises that away. `mountCrumb` also
+drops the repeated site chrome above the title (tagline + the chapter back-link), which the crumb now
+states consistently.
+
 ## Architecture
 
 Content scripts share one namespace, `window.__physioReskin` (aliased `PR`), and attach their APIs

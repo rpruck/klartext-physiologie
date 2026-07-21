@@ -34,7 +34,9 @@
 
   /* ── image taxonomy ─────────────────────────────────────────────────── */
   const NAV_LABEL = {
-    'previous.gif': '‹ Zurück', 'nexttopic.gif': 'Weiter ›', 'man_kapue.jpg': 'Kapitelübersicht',
+    // man_KapUe points at Pruef.htm — the book's index, not the chapter's; the
+    // chapter overview is the hub, which the crumb links to.
+    'previous.gif': '‹ Zurück', 'nexttopic.gif': 'Weiter ›', 'man_kapue.jpg': 'Inhaltsverzeichnis',
     'homebut.jpg': 'Startseite', 'los_gehts.jpg': 'Los geht’s ›', 'rechtsblau.jpg': 'Weiter ›',
     'linksblau.jpg': '‹ Zurück', 'greenbutton.jpg': 'Weiter ›', 'fua.jpg': 'Fragen & Antworten',
     'reise12.jpg': 'Zu den Prüfungsfragen', 'reise3.jpg': 'Zu den Prüfungsfragen',
@@ -90,6 +92,46 @@
     'rechtsblau.jpg': 'next', 'nexttopic.gif': 'next', 'greenbutton.jpg': 'next',
   };
   const chapterLabel = (num, dir) => (dir === 'prev' ? '‹ Kapitel ' + num : 'Kapitel ' + num + ' ›');
+
+  /* ── where am I? ────────────────────────────────────────────────────────
+     Nothing on a page says which chapter it belongs to — the hub prints its
+     title, the section pages print a differently-worded back-link, and neither
+     shows a number. The URL is the only reliable signal, so map it against the
+     master table (the titles are Pruef.htm's, verbatim). */
+  const CHAPTERS = {
+    I: 'Allgemeine Grundlagen, Physiologie der Zelle',
+    II: 'Humoral-neuronale Steuerung und Kontrolle',
+    III: 'Leberfunktionen, hepatobiliäres System',
+    IV: 'Ernährung und Verdauungssystem',
+    V: 'Energie- und Stoffwechsel',
+    VI: 'Physiologie des Herzens',
+    VII: 'Kreislauf, Blut, Lymphe',
+    VIII: 'Respirationssystem, Atemgastransport',
+    IX: 'Nierenfunktion und ableitende Harnwege',
+    X: 'Blutdruck, Wasserhaushalt, Säure-Basen-Status',
+    XI: 'Mineral- und Eisenhaushalt, Knochensystem',
+    XII: 'Spezielle Endokrinologie',
+    XIII: 'Sexualität, Reproduktion, Entwicklung, Wachstum',
+    XIV: 'Funktion der Sinnesorgane',
+    XV: 'Körperhaltung und Motorik',
+    XVI: 'Integrative Funktionen des Nervensystems',
+    XVII: 'Immunologische Grundlagen',
+    XVIII: 'Integration der Organsysteme',
+  };
+  // I.htm (hub) · I.1.htm (section) · IV.5A.htm (a section's annex) ·
+  // X2.htm (chapter X's hub — the one irregular file name, hence trailing \d?).
+  const PAGE_REF = /^(x{0,3})(ix|iv|v?i{0,3})(?:\.(\d+)([a-z])?)?\d?\.html?$/i;
+  function pageRef(file) {
+    const m = PAGE_REF.exec(base(file));
+    if (!m) return null;
+    const rom = (m[1] + m[2]).toUpperCase();
+    if (!CHAPTERS[rom]) return null;
+    const num = m[3] == null ? null : +m[3];
+    return { rom, num, annex: m[4] || '', title: CHAPTERS[rom], hub: rom === 'X' ? 'X2.htm' : rom + '.htm' };
+  }
+  // Chapter I numbers its sections from 0 (I.0 is the introduction); every
+  // other chapter starts at 1. Normalise so "Abschnitt 1" is always the first.
+  const ordinal = (ref) => (ref.rom === 'I' ? ref.num + 1 : ref.num) + ref.annex;
   function chapterNav(a) {
     const href = a.getAttribute('href');
     const m = href && CHAPTER_HREF.exec(base(href));
@@ -491,6 +533,90 @@
     reader.querySelectorAll('[id]').forEach((el) => { if (seen.has(el.id)) el.removeAttribute('id'); else seen.add(el.id); });
   }
 
+  /* ── eyebrow ────────────────────────────────────────────────────────────
+     A hub and a section page look identical once reskinned — same title
+     treatment, same pager. Print the position instead:
+       hub      Kapitel VIII · Übersicht
+       section  Kapitel VIII · Respirationssystem… · Abschnitt 2   (→ the hub) */
+  function renderCrumb(ref) {
+    const nav = document.createElement('nav');
+    nav.className = 'pr-crumb';
+    const up = document.createElement(ref.num == null ? 'span' : 'a');
+    up.className = 'pr-crumb-up';
+    if (ref.num != null) up.href = ref.hub;
+    const kap = document.createElement('span');
+    kap.className = 'pr-crumb-kap';
+    kap.textContent = 'Kapitel ' + ref.rom;
+    up.appendChild(kap);
+    if (ref.num != null) {
+      const t = document.createElement('span');
+      t.className = 'pr-crumb-of';
+      t.textContent = ref.title;
+      up.appendChild(t);
+    }
+    const sec = document.createElement('span');
+    sec.className = 'pr-crumb-sec';
+    sec.textContent = ref.num == null ? 'Übersicht' : 'Abschnitt ' + ordinal(ref);
+    nav.append(up, sec);
+    return nav;
+  }
+
+  // Above every title the site prints the same chrome: a site tagline and, on
+  // section pages, a bare link back to the chapter under yet another name. The
+  // crumb says both — and says them the same way on every page — so drop them.
+  const TAGLINE = /^(Eine Reise durch die Physiologie|Physiologie lernen\b|Wie funktioniert der menschliche Körper\?$)/;
+  function mountCrumb(reader, ref) {
+    const kids = [...reader.children];
+    let at = kids.findIndex((el) => /^H[1-3]$/.test(el.tagName));
+    // Only trust a title near the top; deeper down it's body prose, and the
+    // crumb belongs above the fold either way.
+    if (at < 0 || at > 7) at = 0;
+    for (let i = at - 1; i >= 0; i--) {
+      const el = kids[i];
+      if (el.tagName !== 'P') continue;
+      const txt = norm(el.textContent), a = el.querySelector('a[href]');
+      const backLink = a && norm(a.textContent) === txt &&
+        base(a.getAttribute('href')).toLowerCase() === ref.hub.toLowerCase();
+      if (TAGLINE.test(txt) || backLink) { el.remove(); at--; }
+    }
+    reader.insertBefore(renderCrumb(ref), reader.children[at] || null);
+  }
+
+  // Dropping the chrome above the title can leave the Inhaltsverzeichnis pill
+  // and the prev/next pager as two stacked rows; they're one control. Fold them
+  // together and re-sort into pager order (back · rest · forward).
+  function mergeNavRows(reader) {
+    reader.querySelectorAll('.pr-navrow + .pr-navrow').forEach((row) => {
+      const into = row.previousElementSibling;
+      while (row.firstChild) into.appendChild(row.firstChild);
+      row.remove();
+      [...into.children].sort((a, b) => navRank(a.textContent) - navRank(b.textContent))
+        .forEach((a) => into.appendChild(a));
+    });
+  }
+
+  // Number the index entries so a hub reads as a numbered chapter contents and
+  // the numbers match the "Abschnitt n" the section page then shows. Only on
+  // pages that HAVE an index (a hub, or Pruef.htm) — inside a section the same
+  // shape is a run of "siehe auch" cross-references, which numbers would fake
+  // into a contents.
+  function numberIndex(reader, ref) {
+    if (ref && ref.num != null) return;
+    reader.querySelectorAll('.pr-linklist > p').forEach((p) => {
+      // One entry, but the source often splits it across several <a>s sharing
+      // the href (I.5's title is six of them) — accept those, reject real lists.
+      const hrefs = [...p.querySelectorAll('a[href]')].map((a) => a.getAttribute('href'));
+      if (!hrefs.length || hrefs.some((h) => h !== hrefs[0])) return;
+      if (hrefs[0].includes('#')) return;      // deep link into a section, not the section
+      const to = pageRef(hrefs[0]);
+      if (!to) return;
+      const n = document.createElement('span');
+      n.className = 'pr-linknum';
+      n.textContent = to.num == null ? to.rom : ordinal(to) + '.';
+      p.insertBefore(n, p.firstChild);
+    });
+  }
+
   function mountReader(reader) {
     // The site's <body> carries an inline background-color (plus legacy
     // bgcolor/link attrs); inline style outranks content.css's
@@ -513,6 +639,10 @@
     const reader = document.createElement('main');
     reader.id = 'pr-reader';
     while (rendered.firstChild) reader.appendChild(rendered.firstChild);
+    const ref = pageRef(location.pathname);
+    numberIndex(reader, ref);
+    if (ref) mountCrumb(reader, ref);
+    mergeNavRows(reader);
     mountReader(reader);
     dedupeIds(reader);
     return reader;
@@ -529,6 +659,8 @@
     const portraitSrc = (portrait && portrait.getAttribute('src')) || 'HHS25.jpg';
     const pruef = document.querySelector('a[href*="Pruef.htm" i]');
     const pruefHref = (pruef && pruef.getAttribute('href')) || 'Pruef.htm';
+    const author = document.querySelector('a[href*="HHS" i][href$=".htm" i]');
+    const authorHref = (author && author.getAttribute('href')) || 'HHS.deutsch.htm';
 
     const reader = document.createElement('main');
     reader.id = 'pr-reader';
@@ -548,15 +680,16 @@
     cta.className = 'pr-nav'; cta.href = pruefHref; cta.textContent = 'Zu den Prüfungsfragen';
     nav.appendChild(cta);
 
-    const fig = document.createElement('figure');
-    fig.className = 'pr-fig';
-    const a = document.createElement('a'); a.href = 'HHS.deutsch.htm';
-    const im = document.createElement('img'); im.src = portraitSrc; im.alt = 'Der Autor'; im.loading = 'lazy';
-    a.appendChild(im); fig.appendChild(a);
-    const fc = document.createElement('figcaption'); fc.className = 'pr-figcap'; fc.textContent = 'Über den Autor';
-    fig.appendChild(fc);
+    // NOT a figure.pr-fig: tools.js claims every reader figure for the lightbox,
+    // which swallowed the click and made this link dead. Portrait and label are
+    // one link instead, so both halves of the affordance navigate.
+    const bio = document.createElement('a');
+    bio.className = 'pr-author'; bio.href = authorHref;
+    const im = document.createElement('img'); im.src = portraitSrc; im.alt = ''; im.loading = 'lazy';
+    const cap = document.createElement('span'); cap.className = 'pr-author-cap'; cap.textContent = 'Über den Autor';
+    bio.append(im, cap);
 
-    hero.append(h1, sub, nav, fig);
+    hero.append(h1, sub, nav, bio);
     reader.appendChild(hero);
     return mountReader(reader);
   }

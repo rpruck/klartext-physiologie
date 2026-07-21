@@ -180,6 +180,43 @@ html.pr-on #pr-reader a.pr-nav:hover {
 }
 html.pr-on #pr-reader .pr-navrow { display: flex; flex-wrap: wrap; gap: .4rem; margin: 1.6em 0; }
 
+/* ── chapter / section eyebrow (reskin.js renderCrumb) ──────────────────
+   Says which chapter you're in and whether this is its overview or one of its
+   sections — reskinned, the two are otherwise indistinguishable. */
+html.pr-on #pr-reader .pr-crumb {
+  font-family: var(--font-label);
+  font-size: .7rem;
+  line-height: 1.6;
+  color: var(--ink-soft);
+  margin: 0 0 1.1em;
+}
+html.pr-on #pr-reader .pr-crumb a.pr-crumb-up {
+  background: none;
+  color: inherit;
+  transition: color .2s var(--ease);
+}
+html.pr-on #pr-reader .pr-crumb a.pr-crumb-up:hover { color: var(--accent-ink); }
+html.pr-on #pr-reader .pr-crumb-kap {
+  text-transform: uppercase;
+  letter-spacing: .13em;
+  font-weight: 600;
+  color: var(--accent-ink);
+}
+html.pr-on #pr-reader .pr-crumb-sec { text-transform: uppercase; letter-spacing: .13em; }
+html.pr-on #pr-reader .pr-crumb-of::before,
+html.pr-on #pr-reader .pr-crumb-sec::before {
+  content: "·";
+  margin: 0 .6em;
+  opacity: .5;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--ink-soft);
+}
+/* the eyebrow IS the title's kicker — kill the h2 accent rule under it */
+html.pr-on #pr-reader .pr-crumb + h2 { margin-top: 0; }
+html.pr-on #pr-reader .pr-crumb + h2::before { display: none; }
+html.pr-on #pr-reader .pr-crumb + h1 { margin-top: 0; }
+
 /* ── chapter index (runs of link-only lines, tagged `linkitem` by reskin.js) ─
    Paragraph leading turns a 16-entry index into two screenfuls; this reads as
    one list instead. */
@@ -190,7 +227,20 @@ html.pr-on #pr-reader .pr-linklist {
   margin: 1.4em 0;
   line-height: 1.4;
 }
-html.pr-on #pr-reader .pr-linklist p { margin: 0; }
+/* never justify an index — the ragged column is the point, and justification
+   blows the short entries apart */
+html.pr-on #pr-reader .pr-linklist p { margin: 0; display: flex; gap: .85em; text-align: left; }
+/* section numbers, so a hub reads as a numbered contents (reskin.js numberIndex) */
+html.pr-on #pr-reader .pr-linknum {
+  flex: 0 0 2.4em;   /* wide enough for "XVIII" on Pruef.htm's chapter index */
+  text-align: right;
+  font-family: var(--font-label);
+  font-size: .74em;
+  line-height: 1.85;
+  letter-spacing: .02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
 /* the hubs bold their index, Pruef.htm doesn't — read as one list either way */
 html.pr-on #pr-reader .pr-linklist strong { font-weight: inherit; }
 
@@ -347,4 +397,29 @@ html.pr-on #pr-reader .pr-hero h1 { font-size: 2.3em; line-height: 1.14; margin:
 html.pr-on #pr-reader .pr-hero-sub { color: var(--ink-soft); font-size: 1.12em; line-height: 1.4; margin: 0 auto 2em; max-width: 26rem; }
 html.pr-on #pr-reader .pr-hero .pr-navrow { justify-content: center; margin: 0 0 2.8em; }
 html.pr-on #pr-reader .pr-hero .pr-navrow a.pr-nav { font-size: .74rem; padding: .6em 1.2em; }
-html.pr-on #pr-reader .pr-hero figure.pr-fig { margin: 0 auto; max-width: 210px; }
+/* author link — portrait + label as one target (see reskin.js renderHome) */
+html.pr-on #pr-reader a.pr-author {
+  display: inline-block;
+  max-width: 210px;
+  background: none;
+  color: var(--ink-soft);
+  text-decoration: none;
+}
+html.pr-on #pr-reader a.pr-author img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+  border: 1px solid var(--hair);
+  transition: transform .35s var(--ease), box-shadow .35s var(--ease);
+}
+html.pr-on #pr-reader a.pr-author .pr-author-cap {
+  display: block;
+  font-family: var(--font-label);
+  font-size: .72rem;
+  letter-spacing: .01em;
+  margin-top: .8em;
+  transition: color .2s var(--ease);
+}
+html.pr-on #pr-reader a.pr-author:hover img { transform: translateY(-2px); box-shadow: var(--shadow); }
+html.pr-on #pr-reader a.pr-author:hover .pr-author-cap { color: var(--accent-ink); }
