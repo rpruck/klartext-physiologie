@@ -38,13 +38,20 @@
     // chapter overview is the hub, which the crumb links to.
     'previous.gif': '‹ Zurück', 'nexttopic.gif': 'Weiter ›', 'man_kapue.jpg': 'Inhaltsverzeichnis',
     'homebut.jpg': 'Startseite', 'los_gehts.jpg': 'Los geht’s ›', 'rechtsblau.jpg': 'Weiter ›',
-    'linksblau.jpg': '‹ Zurück', 'greenbutton.jpg': 'Weiter ›', 'fua.jpg': 'Fragen & Antworten',
+    'linksblau.jpg': '‹ Zurück', 'fua.jpg': 'Fragen & Antworten',
     'reise12.jpg': 'Zu den Prüfungsfragen', 'reise3.jpg': 'Zu den Prüfungsfragen',
   };
   // Single-use decorative art (mascots, motto banners, section labels) that the
   // size/repeat heuristics can't catch. Maintained deny-list — deco detection on
   // this site is inherently a curated list plus the size/repeat/aspect signals.
-  const DECO = new Set(['begriff.jpg', 'begriffe.jpg', 'exkurs.jpg', 'spruchband.jpg', 'snake.jpg',
+  // greenbutton.jpg is NOT a pager — it's the badge that marks a reference-value
+  // block ("● Calcium / ☞ s. dort"), 86× across the book and never once a next
+  // link. As a nav image it rendered a stray "Weiter ›" pill mid-article that
+  // jumped to RefWT.htm, doubling the "Referenzwerte"/"dort" link beside it.
+  // Drop the badge: 67 of those blocks link RefWT themselves, the rest print
+  // the values inline.
+  const DECO = new Set(['greenbutton.jpg',
+    'begriff.jpg', 'begriffe.jpg', 'exkurs.jpg', 'spruchband.jpg', 'snake.jpg',
     'column.gif', 'smile1.jpeg', 'openacc.jpg', 'lstrc_archivelogo.png', 'merke.jpg', 'merke2.jpg',
     'pharm.jpg', 'histor.jpg', 'fkh.jpg', 'anw.jpg', 'orientierung.jpg', 'etym.jpg', 'vitru.jpg',
     'life_has_meaning.jpg', 'dt_real.jpg', 'ohne_physio.jpeg', 'ohne_physio.jpg']);
@@ -154,9 +161,13 @@
     const a = img.closest('a[href]');
     const sole = a && !a.textContent.trim() && a.querySelectorAll('img').length === 1;
     const [w, h] = imgSize(img);
-    if (sole && (NAV_LABEL[f] || (isPageLink(a.getAttribute('href')) && !isFigureSize(w, h))))
-      return { kind: 'nav', href: a.getAttribute('href'), label: navLabel(f, a.getAttribute('href'), img.getAttribute('alt')) };
+    const asNav = () => ({ kind: 'nav', href: a.getAttribute('href'), label: navLabel(f, a.getAttribute('href'), img.getAttribute('alt')) });
+    // A named control wins outright (reise*.jpg is both a pager and a DECO_PREFIX
+    // match). Everything else on the deny-list stays deco even when it links out —
+    // otherwise a badge picks up navLabel's "Weiter ›" fallback and poses as a pager.
+    if (sole && NAV_LABEL[f]) return asNav();
     if (isDecoName(f)) return { kind: 'deco' };
+    if (sole && isPageLink(a.getAttribute('href')) && !isFigureSize(w, h)) return asNav();
     if (counts.get(f) >= 3) return { kind: 'deco' };
     if (!w || !h) return { kind: 'inline' };
     const mn = Math.min(w, h), aspect = mn ? Math.max(w, h) / mn : 99;
