@@ -48,8 +48,8 @@ to it (`PR.reskin`, `PR.settings`, `PR.ui`, `PR.tools`, `PR.anchor`, `PR.fonts`,
 - **`src/boot.css` + `src/boot.js`** (`document_start`) — kill the flash of the original page and
   paint the user's cached paper colour. `body` is `visibility:hidden` (layout preserved) until the
   reskin is ready, so `getComputedStyle().fontSize` stays truthful during heading measurement.
-- **`document_end` chain** (order fixed in `manifest.json`): `store → anchor → fonts → reskin → ui →
-  tools → settings → activate → content`. `src/content.js` is the orchestrator; the critical
+- **`document_end` chain** (order fixed in `manifest.json`): `store → visited → anchor → fonts →
+  reskin → ui → tools → settings → activate → content`. `src/content.js` is the orchestrator; the critical
   invariant is **measure original sizes → build reader → apply settings → add `html.pr-on` → reveal
   (`html.pr-ready`)**. `content.css` is injected but inert until `.pr-on`.
 
@@ -64,6 +64,7 @@ Key files:
 | `src/tools.js` | Study interactions (highlight / notes / pins / lightbox) |
 | `src/anchor.js` | Self-healing annotation anchoring — the biggest correctness surface |
 | `src/store.js` | `chrome.storage.local` wrapper + a tiny synchronous localStorage mirror for `boot.js` |
+| `src/visited.js` | Records pages read (storage key `visited`) and tags links to them `.pr-seen` |
 | `src/fonts.js` | Registers the bundled woff2 faces from `fonts/` |
 | `popup.html` / `src/popup.js` | Toolbar on/off switch |
 
@@ -90,8 +91,11 @@ memory, `reskin-testing`):
   `src/*` chain (with an mtime cache-buster). Drive with the Playwright MCP.
 - Representative spread: I.0 (callout-heavy), I.1 (densest, ~825 KB), VIII.2, Einheiten (tables),
   I.htm (hub), Pruef.htm (TOC), home.
-- Harness caveats: `chrome.storage`/`chrome.runtime` are absent, so persistence is inert and
-  `ui.css` won't auto-load into the shadow (inject it manually to test the panel); `isHome()` keys on
+- The harness stubs `chrome.storage.local` over `localStorage` (`pr.harness.*`) and
+  `chrome.runtime.getURL`, so settings, annotations and the visited record persist and `ui.css`
+  loads into the shadow. `?seen=/i.1.htm,/i.3.htm` preseeds the visited record.
+- Harness caveats: the `<base href>` makes link hrefs resolve to physiologie.cc while
+  `location.pathname` stays `/dev/…`, so a page never records itself as read; `isHome()` keys on
   `location.pathname`, so the homepage is only exercised via a real `/` path.
 
 ## Conventions

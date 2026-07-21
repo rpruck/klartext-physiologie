@@ -10,7 +10,30 @@ m = re.search(r'<body([^>]*)>(.*)</body>', src, re.S|re.I)
 body_attrs = m.group(1) if m else ''
 body = m.group(2) if m else src
 scripts = ''.join(f'<script src="{BASE}/src/{f}?v={V}"></script>\n' for f in
-  ['store.js','anchor.js','fonts.js','reskin.js','ui.js','tools.js','settings.js','activate.js','content.js'])
+  ['store.js','visited.js','anchor.js','fonts.js','reskin.js','ui.js','tools.js','settings.js','activate.js','content.js'])
+# A localStorage-backed chrome.storage.local, so anything that persists
+# (settings, annotations, the visited record) is exercisable here too.
+# ?seen=/i.1.htm,/i.2.htm preseeds the visited record before boot.
+stub = '''<script>
+(function () {
+  const K = (k) => 'pr.harness.' + k;
+  const rd = (k) => { try { const v = localStorage.getItem(K(k)); return v == null ? undefined : JSON.parse(v); } catch (e) { return undefined; } };
+  window.chrome = window.chrome || {};
+  chrome.storage = { local: {
+    get(key, cb) { const o = {}; const v = rd(key); if (v !== undefined) o[key] = v; cb(o); },
+    set(obj, cb) { for (const k in obj) localStorage.setItem(K(k), JSON.stringify(obj[k])); cb && cb(); },
+    remove(key, cb) { localStorage.removeItem(K(key)); cb && cb(); },
+  }, onChanged: { addListener() {} } };
+  chrome.runtime = chrome.runtime || { getURL: (p) => 'BASE_/' + p };
+  const seen = new URLSearchParams(location.search).get('seen');
+  if (seen !== null) {
+    const rec = {};
+    seen.split(',').filter(Boolean).forEach((p) => { rec[p.toLowerCase()] = 1; });
+    chrome.storage.local.set({ visited: rec });
+  }
+})();
+</script>
+'''.replace('BASE_', BASE)
 harness = f'''<!doctype html><html lang="de"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <base href="http://physiologie.cc/">
@@ -19,7 +42,7 @@ harness = f'''<!doctype html><html lang="de"><head><meta charset="utf-8">
 <title>harness {out}</title>
 </head><body{body_attrs}>
 {body}
-<script src="{BASE}/src/boot.js"></script>
+{stub}<script src="{BASE}/src/boot.js"></script>
 {scripts}</body></html>'''
 pathlib.Path(out).write_text(harness, encoding='utf-8')
 print("wrote", out)

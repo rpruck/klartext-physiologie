@@ -58,18 +58,22 @@
     // 6 · Turn the reskin on (CSS was inert until now).
     d.classList.add('pr-on');
 
-    // 7 · Wire the study tools, then restore this page's annotations.
+    // 7 · Mark links to pages already read (and record this one) — before the
+    //     reveal, so the markers are there on first paint.
+    if (PR.visited) await PR.visited.apply(reader);
+
+    // 8 · Wire the study tools, then restore this page's annotations.
     if (PR.anchor && PR.anchor.assignBlockIds) PR.anchor.assignBlockIds(reader);
     if (PR.tools && PR.tools.init) PR.tools.init();
     const pageKey = PR.store ? PR.store.pageKey() : null;
     const page = pageKey ? (await PR.store.get(pageKey)) || {} : {};
     if (PR.tools && PR.tools.restore) PR.tools.restore(page);
 
-    // 8 · Reveal the finished page + play the one-time activation animation.
+    // 9 · Reveal the finished page + play the one-time activation animation.
     reveal();
     PR.activate && PR.activate.play && PR.activate.play();
 
-    // 9 · React to settings / enable changes from other tabs or the popup (M9).
+    // 10 · React to settings / enable changes from other tabs or the popup (M9).
     if (PR.store) PR.store.onChanged(onStorageChanged);
   }
 

@@ -23,6 +23,7 @@
       "css": ["src/content.css"],
       "js": [
         "src/store.js",
+        "src/visited.js",
         "src/anchor.js",
         "src/fonts.js",
         "src/reskin.js",

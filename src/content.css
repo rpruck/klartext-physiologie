@@ -111,6 +111,15 @@ html.pr-on #pr-reader a {
   background-repeat: no-repeat;
 }
 html.pr-on #pr-reader a:hover { background-size: 100% 2px; }
+/* already read (visited.js tags these): the rule recedes to a hairline, so a
+   page you've been to reads as settled rather than pending. Hover still brings
+   the accent back — nothing here should feel dead. */
+html.pr-on #pr-reader a.pr-seen {
+  background-image: linear-gradient(var(--hair), var(--hair));
+}
+html.pr-on #pr-reader a.pr-seen:hover {
+  background-image: linear-gradient(var(--accent-line), var(--accent-line));
+}
 
 /* ── headings (reskin.js emits real <h1|h2|h3>) ────────────────────────── */
 html.pr-on #pr-reader h1,
@@ -178,6 +187,19 @@ html.pr-on #pr-reader a.pr-nav:hover {
   border-color: var(--accent-line);
   background: var(--accent-tint);
 }
+/* a pill you've already followed carries the same dot the index uses */
+html.pr-on #pr-reader a.pr-nav.pr-seen::before {
+  content: "";
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: .5;
+  vertical-align: .12em;
+  margin-right: .55em;
+}
+html.pr-on #pr-reader a.pr-nav.pr-seen:hover::before { opacity: .9; }
 html.pr-on #pr-reader .pr-navrow { display: flex; flex-wrap: wrap; gap: .4rem; margin: 1.6em 0; }
 
 /* ── chapter / section eyebrow (reskin.js renderCrumb) ──────────────────
@@ -240,6 +262,23 @@ html.pr-on #pr-reader .pr-linknum {
   letter-spacing: .02em;
   font-variant-numeric: tabular-nums;
   color: var(--ink-soft);
+  position: relative;   /* anchors the read-marker dot below */
+}
+/* read entries get a dot in the gap between number and label — hung off the
+   number, so it needs no layout of its own and the labels stay on their shared
+   grid. Offsets are in the number's em (half the .85em column gap, half its
+   1.85 line-height) so they track the reader's font size. Only where there IS
+   a number to hang it on; elsewhere the receded underline carries it alone. */
+html.pr-on #pr-reader .pr-linklist p:has(a.pr-seen) > .pr-linknum::after {
+  content: "";
+  position: absolute;
+  right: calc(-.575em - 2px);
+  top: calc(.925em - 2px);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: .55;
 }
 /* the hubs bold their index, Pruef.htm doesn't — read as one list either way */
 html.pr-on #pr-reader .pr-linklist strong { font-weight: inherit; }
