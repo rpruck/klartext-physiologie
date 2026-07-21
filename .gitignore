@@ -9,7 +9,16 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Real page snapshots and everything mkharness.py generates from them — all
+# regenerable, and copies of physiologie.cc's own pages. Only the generator
+# itself is tracked.
 .test/
+dev/*
+!dev/mkharness.py
+
+# Superseded Strategy-B prototype (src/ is the source of truth now)
+proto/
 
 # Throwaway review/verify/prototype screenshots dropped at the repo root
 # (keep the real logo). Legit assets live under icons/, research/, fonts/.
