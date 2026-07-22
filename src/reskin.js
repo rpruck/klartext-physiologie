@@ -187,7 +187,16 @@
     const rom = (m[1] + m[2]).toUpperCase();
     if (!CHAPTERS[rom]) return null;
     const num = m[3] == null ? null : +m[3];
-    return { rom, num, annex: m[4] || '', title: CHAPTERS[rom], hub: rom === 'X' ? 'X2.htm' : rom + '.htm' };
+    const annex = (m[4] || '').toUpperCase();
+    const hub = rom === 'X' ? 'X2.htm' : rom + '.htm';
+    /* `file` is the page as the SERVER spells it — uppercase numeral, uppercase
+       annex (IV.5A.htm), always .htm. The book is served case-sensitively, so
+       anything that has been through a lowercasing (store.pageKey, a hand-typed
+       URL) needs its real name handed back before it can be linked to. */
+    return {
+      rom, num, annex, title: CHAPTERS[rom], hub,
+      file: num == null ? hub : rom + '.' + num + annex + '.htm',
+    };
   }
   // Chapter I numbers its sections from 0 (I.0 is the introduction); every
   // other chapter starts at 1. Normalise so "Abschnitt 1" is always the first.

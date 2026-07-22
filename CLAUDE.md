@@ -126,11 +126,14 @@ accordion and `src/progress.js` draws a ruler of it down the right edge.
   Einstellungen. The rail can only ever answer "where are the marks on *this* page", so the
   question the reskin makes worth asking — where did I mark something in the *book* — had no
   surface. Every page record lives under `page:<path>` in one storage area, so the list is one
-  `store.all()` and a sort by recency. It never opens a page: the naming a row needs (`pageTitle`,
-  `secTitle`, `label`, `t`, and `p` — the path in the server's own casing, which the lowercased
-  record key has lost) is captured by `setMark()` and stored **on the mark**. Chapter and section
-  numbers are the exception — `pageRef()`/`ordinal()` derive those from the path, so storing them
-  would only let them rot. A row is a real `<a href="…#pr-mark-<hash>-<n>">`, which makes
+  `store.all()` and a sort by recency (undated marks — set before this existed — sort last, newest
+  added first, the only order their position in the record states). It never opens a page: the
+  naming a row needs (`pageTitle`, `secTitle`, `label`, `t`) is captured by `setMark()` and stored
+  **on the mark**. Chapter and section numbers are the exception — `pageRef()`/`ordinal()` derive
+  those from the path, so storing them would only let them rot. The link target is derived too:
+  `pageRef().file` rebuilds the page as the *server* spells it (uppercase numeral and annex,
+  always `.htm`), because `pageKey()` lowercases and physiologie.cc is case-sensitive — a row
+  linking at `/i.0.htm` 404s. A row is a real `<a href="…#pr-mark-<hash>-<n>">`, which makes
   middle-click and new-tab free; `consumeHash()` lands on the block at the other end, and lands
   again on `load`, because at `document_end` the figures are unsized boxes and everything above
   the target is still moving. Setting and listing marks are the two halves of one topbar pill and

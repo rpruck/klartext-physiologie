@@ -43,42 +43,38 @@
     Object.keys(all).forEach((key) => {
       if (key.indexOf('page:') !== 0) return;
       const marks = (all[key] && all[key].marks) || [];
-      // m.p is the path as the server spells it; the key has been lowercased.
-      marks.forEach((m) => out.push({ m, key, path: m.p || key.slice(5), here: key === here }));
+      marks.forEach((m, i) => out.push({ m, i, key, path: m.p || key.slice(5), here: key === here }));
     });
-    // Newest first. A mark from before this feature has no date and has to go
-    // somewhere — the bottom, where it doesn't claim a recency it can't state.
-    out.sort((a, b) => (b.m.t || 0) - (a.m.t || 0));
+    /* Newest first. A mark from before this feature carries no date and has to
+       go somewhere: the bottom, where it claims no recency it can't state —
+       and among those, latest-added first, which is the only ordering their
+       position in the record does tell us. */
+    out.sort((a, b) => (b.m.t || 0) - (a.m.t || 0) || b.i - a.i);
     return out;
   }
 
   /* ── naming a row ──────────────────────────────────────────────────────── */
-  // "Kapitel VIII · Abschnitt 2", or nothing for a page outside the book's
-  // numbering (Pruef.htm, Einheiten.htm, the home page).
-  function where(path) {
-    const R = PR.reskin;
-    const ref = R && R.pageRef && R.pageRef(path);
-    if (!ref) return null;
-    const text = 'Kapitel ' + ref.rom + (ref.num == null ? '' : ' · Abschnitt ' + R.ordinal(ref));
-    return { text, title: ref.title };
-  }
+  // "Kapitel VIII · Abschnitt 2", or null for a page outside the book's
+  // numbering (Pruef.htm, Einheiten.html, the home page).
+  const where = (ref) =>
+    ref ? 'Kapitel ' + ref.rom + (ref.num == null ? '' : ' · Abschnitt ' + PR.reskin.ordinal(ref)) : null;
 
-  const RTF = (() => {
-    try { return new Intl.RelativeTimeFormat('de', { numeric: 'auto' }); } catch (e) { return null; }
-  })();
-  const MIN = 60e3, HOUR = 60 * MIN, DAY = 24 * HOUR;
+  /* When it was set, stated rather than approximated: "vor 3 Stunden" reads
+     nicely and answers nothing when two marks are minutes apart. The day is
+     named while it is still worth naming, the clock time always. */
+  const HHMM = { hour: '2-digit', minute: '2-digit' };
+  const midnight = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   function when(t) {
     if (!t) return '';
-    const age = Date.now() - t;
-    if (!RTF) return new Date(t).toLocaleDateString('de-DE');
-    if (age < MIN) return 'gerade eben';
-    if (age < HOUR) return RTF.format(-Math.round(age / MIN), 'minute');
-    if (age < DAY) return RTF.format(-Math.round(age / HOUR), 'hour');
-    if (age < 7 * DAY) return RTF.format(-Math.round(age / DAY), 'day');
-    const d = new Date(t);
-    const opts = { day: 'numeric', month: 'long' };
-    if (d.getFullYear() !== new Date().getFullYear()) opts.year = 'numeric';
-    return d.toLocaleDateString('de-DE', opts);
+    const d = new Date(t), now = new Date();
+    const days = Math.round((midnight(now) - midnight(d)) / 864e5);
+    const clock = d.toLocaleTimeString('de-DE', HHMM);
+    if (days === 0) return 'Heute, ' + clock;
+    if (days === 1) return 'Gestern, ' + clock;
+    const date = d.toLocaleDateString('de-DE', d.getFullYear() === now.getFullYear()
+      ? { day: 'numeric', month: 'long' }
+      : { day: 'numeric', month: 'long', year: 'numeric' });
+    return date + ', ' + clock;
   }
 
   /* ── reading and writing another page's record ─────────────────────────
@@ -122,12 +118,17 @@
     const m = entry.m;
     const item = el('div', 'bm-item' + (entry.here ? ' here' : ''));
     const a = el('a', 'bm-row');
-    a.href = entry.path + '#pr-mark-' + m.b + '-' + m.n;
+    /* The book's own spelling of the page wins over the recorded path: the
+       record key is lowercased (page:/i.0.htm) and the server is
+       case-sensitive, so a mark set before the path was stored — or restored
+       from that key — would otherwise link at a page that 404s. */
+    const ref = PR.reskin && PR.reskin.pageRef && PR.reskin.pageRef(entry.path);
+    a.href = (ref ? '/' + ref.file : entry.path) + '#pr-mark-' + m.b + '-' + m.n;
 
-    const w = where(entry.path);
+    const w = where(ref);
     if (w) {
-      const line = el('span', 'bm-where', w.text);
-      line.title = w.title;                     // the chapter's full title
+      const line = el('span', 'bm-where', w);
+      line.title = ref.title;                   // the chapter's full title
       a.appendChild(line);
     }
     // The page and the section inside it — the two names the crumb and the
@@ -149,8 +150,10 @@
       a.appendChild(el('span', 'bm-title', m.label));
     }
 
-    const age = when(m.t);
-    a.appendChild(el('time', 'bm-time', entry.here ? [age, 'diese Seite'].filter(Boolean).join(' · ') : age));
+    const stamp = when(m.t);
+    const time = el('time', 'bm-time', entry.here ? [stamp, 'diese Seite'].filter(Boolean).join(' · ') : stamp);
+    if (m.t) time.dateTime = new Date(m.t).toISOString();
+    a.appendChild(time);
 
     // A mark on the page you are standing on doesn't need a page load to reach.
     a.addEventListener('click', (ev) => {
