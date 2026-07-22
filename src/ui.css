@@ -70,6 +70,9 @@
   stroke-linejoin: round;
 }
 .tb-glyph-list { height: .62em; }   /* …the list is wider than tall */
+/* A filled glyph, not a stroked one — and filled shapes read smaller at the
+   same box, so it is set a little taller than the drawn hairline pair. */
+.tb-glyph-fill { fill: currentColor; stroke: none; height: 1.05em; }
 
 /* Two halves of one pill: set a mark · read the book's marks. The outer radii
    are the pill's, the seam between them is a single hairline, and hover tints
@@ -457,13 +460,13 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
    accent, with the word set in the margin at its right end rather than over the
    text, so it never covers the line it is pointing at. */
 .insp-rule {
-  position: fixed; z-index: 88; height: 0; pointer-events: none;
-  border-top: 1px solid var(--accent);
+  position: fixed; z-index: 88; height: 3px; pointer-events: none;
+  background: var(--accent); border-radius: 999px;
   opacity: 0; transition: opacity .12s var(--ease);
 }
 .insp-rule.show { opacity: 1; }
 .insp-rule-tag {
-  position: absolute; right: 0; top: -1.15rem;
+  position: absolute; right: 0; top: -1.65rem;
   font-family: var(--font-label); font-size: .56rem; letter-spacing: .12em;
   text-transform: uppercase; color: var(--accent-ink);
   background: var(--accent-tint); border: 1px solid var(--accent-line);

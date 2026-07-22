@@ -41,10 +41,13 @@
      have an opinion about. Clamped like a pin: any position is allowed that
      leaves PEEK of the frame on screen, measured against clientWidth so a strip
      under the scrollbar doesn't count. */
-  const defaultGeo = () => ({
-    w: Math.round(vw() * 0.9), h: Math.round(vh() * 0.85),
-    x: Math.round(vw() * 0.05), y: Math.round(vh() * 0.075),
-  });
+  // Centred, and short enough that the corner handle is plainly on screen: at
+  // 85% of the height it sat past the fold on a laptop and the one control that
+  // makes the window smaller was the one you couldn't reach.
+  const defaultGeo = () => {
+    const w = Math.round(vw() * 0.9), h = Math.round(vh() * 0.7);
+    return { w, h, x: Math.round((vw() - w) / 2), y: Math.round((vh() - h) / 2) };
+  };
   function clamp(g) {
     const w = Math.max(MIN_W, Math.min(vw(), g.w));
     const h = Math.max(MIN_H, Math.min(vh(), g.h));
@@ -106,6 +109,9 @@
   function show() {
     if (!open) {
       open = true;
+      // The window lands under the cursor, so there is nothing hovered any
+      // more — left up, the rule of the block you just picked sits behind it.
+      drawRule(null);
       ensureFrame();
       win.classList.add('show');
       hints.classList.add('show');
@@ -257,7 +263,9 @@
     const stored = PR.store ? await PR.store.get('inspect') : null;
     geo = clamp(Object.assign(defaultGeo(), stored || {}));
 
-    btn.onclick = () => (armed ? disarm() : arm());
+    // The button is the way out as well as the way in — hunting for the ✕ at a
+    // corner of a window you just dragged somewhere is not a way out.
+    btn.onclick = () => { if (open) hide(); else if (armed) disarm(); else arm(); };
     win.querySelector('.insp-close').onclick = hide;
     // Back to the size it opens at, for when a session of half-width comparison
     // is over and you just want to read the source.
