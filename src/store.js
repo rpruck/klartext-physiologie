@@ -42,6 +42,17 @@
     });
   }
 
+  // Everything at once — the only way to ask a question ABOUT THE BOOK rather
+  // than about this page (bookmarks.js walks every page:* record). One
+  // round-trip, and only on demand: the whole store is a few hundred KB.
+  function all() {
+    return new Promise((res) => {
+      const a = area();
+      if (!a) { res({}); return; }
+      try { a.get(null, (obj) => res(obj || {})); } catch (e) { res({}); }
+    });
+  }
+
   // Per-page key, normalised to the pathname (query/hash dropped, lowercased),
   // e.g. page:/i.1.htm — shared by www. and non-www. hosts.
   function pageKey() {
@@ -66,7 +77,7 @@
     }
   }
 
-  PR.store = { get, set, remove, pageKey, mirror, onChanged };
+  PR.store = { get, set, remove, all, pageKey, mirror, onChanged };
 
   /* ── the page record ────────────────────────────────────────────────────
      One object under page:<path>, shared by every module that persists
@@ -79,7 +90,14 @@
        open        [ id ]  expanded sections       (outline.js)
        read        { id: fraction }                (progress.js)
        marks       [ … ]   manual bookmarks        (progress.js)
-       auto        { … }   "where I left off"      (progress.js) */
+       auto        { … }   "where I left off"      (progress.js)
+
+     A mark carries enough to be listed from ANOTHER page without opening this
+     one: { id, b, n, sec, f } anchor it on the rail, and { t, p, pageTitle,
+     secTitle, label } name it — bookmarks.js reads them straight out of
+     storage, so opening the list costs one read and no fetches. `p` is the
+     pathname with its real casing, which pageKey() (lowercased) has lost and
+     the case-sensitive server needs back. */
   const REC = { highlights: [], pins: [], open: null, read: {}, marks: [], auto: null };
   let pageTimer = null;
 

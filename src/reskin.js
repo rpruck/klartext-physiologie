@@ -1288,5 +1288,7 @@
     return mountReader(reader);
   }
 
-  PR.reskin = { reflow, renderHome, isHome };
+  // pageRef/ordinal are the book's only URL→place map; bookmarks.js names a
+  // stored mark's page with them rather than storing the chapter on every one.
+  PR.reskin = { reflow, renderHome, isHome, pageRef, ordinal };
 })();

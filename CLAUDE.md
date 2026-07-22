@@ -122,6 +122,19 @@ accordion and `src/progress.js` draws a ruler of it down the right edge.
   proximity test adding `.awake`) rather than on hover — widening the element to reach that far
   would blanket 140px of margin in `pointer-events` and take the text under it out of selection
   range on a narrow window.
+- **`bookmarks.js`** — the same marks read back across the whole book, in a drawer beside
+  Einstellungen. The rail can only ever answer "where are the marks on *this* page", so the
+  question the reskin makes worth asking — where did I mark something in the *book* — had no
+  surface. Every page record lives under `page:<path>` in one storage area, so the list is one
+  `store.all()` and a sort by recency. It never opens a page: the naming a row needs (`pageTitle`,
+  `secTitle`, `label`, `t`, and `p` — the path in the server's own casing, which the lowercased
+  record key has lost) is captured by `setMark()` and stored **on the mark**. Chapter and section
+  numbers are the exception — `pageRef()`/`ordinal()` derive those from the path, so storing them
+  would only let them rot. A row is a real `<a href="…#pr-mark-<hash>-<n>">`, which makes
+  middle-click and new-tab free; `consumeHash()` lands on the block at the other end, and lands
+  again on `load`, because at `document_end` the figures are unsized boxes and everything above
+  the target is still moving. Setting and listing marks are the two halves of one topbar pill and
+  are **independent of the rail** — the "Fortschrittsleiste" toggle hides the ruler only.
 
 Two traps this cost real time on, both from `content-visibility: hidden`:
 
@@ -156,7 +169,7 @@ to it (`PR.reskin`, `PR.settings`, `PR.ui`, `PR.tools`, `PR.anchor`, `PR.fonts`,
   paint the user's cached paper colour. `body` is `visibility:hidden` (layout preserved) until the
   reskin is ready, so `getComputedStyle().fontSize` stays truthful during heading measurement.
 - **`document_end` chain** (order fixed in `manifest.json`): `store → visited → anchor → fonts →
-  reskin → ui → tools → outline → progress → settings → activate → content`. `src/content.js` is the
+  reskin → ui → tools → outline → progress → bookmarks → settings → activate → content`. `src/content.js` is the
   orchestrator; the critical invariant is **measure original sizes → build reader → apply settings →
   add `html.pr-on` → build the outline open → assign block ids → restore annotations → fold →
   reveal (`html.pr-ready`)**. `content.css` is injected but inert until `.pr-on`.
@@ -171,6 +184,7 @@ Key files:
 | `src/ui.js` / `src/ui.css` | Injected chrome in **one Shadow DOM** (host on `<html>`); `ui.css` fetched via `chrome.runtime.getURL` |
 | `src/outline.js` | The page's sections, read off the author's strip, and the accordion over them |
 | `src/progress.js` | The reading rail: read-state per section, bookmarks, per-page reset |
+| `src/bookmarks.js` | Every bookmark in the book, in one drawer — read straight out of storage |
 | `src/tools.js` | Study interactions (highlight / notes / pins / lightbox / glossary hover card) |
 | `src/anchor.js` | Self-healing annotation anchoring — the biggest correctness surface |
 | `src/store.js` | `chrome.storage.local` wrapper, the shared per-page record (`PR.page`), and a tiny synchronous localStorage mirror for `boot.js` |
@@ -223,9 +237,12 @@ memory, `reskin-testing`):
   I.htm (hub), Pruef.htm (TOC), home.
 - The harness stubs `chrome.storage.local` over `localStorage` (`pr.harness.*`) and
   `chrome.runtime.getURL`, so settings, annotations and the visited record persist and `ui.css`
-  loads into the shadow. `?seen=/i.1.htm,/i.3.htm` preseeds the visited record.
+  loads into the shadow. `?seen=/i.1.htm,/i.3.htm` preseeds the visited record. `get(null)`
+  answers with the whole store, which is how `bookmarks.js` finds every `page:*` record.
 - Harness caveats: the `<base href>` makes link hrefs resolve to physiologie.cc while
-  `location.pathname` stays `/dev/…`, so a page never records itself as read; `isHome()` keys on
+  `location.pathname` stays `/dev/…`, so a page never records itself as read, every harness page
+  shares one page record, and a bookmark set there names no chapter (`pageRef` has no `I.1.htm` to
+  read) — seed a `pr.harness.page:/i.1.htm` record by hand to exercise that. `isHome()` keys on
   `location.pathname`, so the homepage is only exercised via a real `/` path.
 
 ### Screenshots

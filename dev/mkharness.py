@@ -11,7 +11,7 @@ body_attrs = m.group(1) if m else ''
 body = m.group(2) if m else src
 scripts = ''.join(f'<script src="{BASE}/src/{f}?v={V}"></script>\n' for f in
   ['store.js','visited.js','anchor.js','fonts.js','reskin.js','ui.js','tools.js','outline.js','progress.js',
-   'settings.js','activate.js','content.js'])
+   'bookmarks.js','settings.js','activate.js','content.js'])
 # A localStorage-backed chrome.storage.local, so anything that persists
 # (settings, annotations, the visited record) is exercisable here too.
 # ?seen=/i.1.htm,/i.2.htm preseeds the visited record before boot.
@@ -26,7 +26,20 @@ stub = '''<script>
   const rd = (k) => { try { const v = localStorage.getItem(K(k)); return v == null ? undefined : JSON.parse(v); } catch (e) { return undefined; } };
   window.chrome = window.chrome || {};
   chrome.storage = { local: {
-    get(key, cb) { const o = {}; const v = rd(key); if (v !== undefined) o[key] = v; cb(o); },
+    // get(null) is "the whole store" — bookmarks.js walks every page:* record
+    // with it, so the stub has to answer it or the list reads back empty.
+    get(key, cb) {
+      const o = {};
+      if (key === null || key === undefined) {
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k.indexOf('pr.harness.') !== 0) continue;
+          const bare = k.slice('pr.harness.'.length);
+          const v = rd(bare); if (v !== undefined) o[bare] = v;
+        }
+      } else { const v = rd(key); if (v !== undefined) o[key] = v; }
+      cb(o);
+    },
     set(obj, cb) { for (const k in obj) localStorage.setItem(K(k), JSON.stringify(obj[k])); cb && cb(); },
     remove(key, cb) { localStorage.removeItem(K(key)); cb && cb(); },
   }, onChanged: { addListener() {} } };

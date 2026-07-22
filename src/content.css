@@ -388,6 +388,9 @@ html.pr-on #pr-reader .pr-sec-num {
   transition: color .2s var(--ease);
 }
 html.pr-on #pr-reader .pr-sec-btn:hover .pr-sec-num { color: var(--accent); }
+/* Begriffe is folded unnumbered — keeping its empty number box only hangs the
+   title in the air, a step right of every other line on the page. */
+html.pr-on #pr-reader .pr-sec-num:empty { display: none; }
 html.pr-on #pr-reader .pr-sec-title {
   flex: 1;
   font-size: 1.06em;
@@ -408,6 +411,7 @@ html.pr-on #pr-reader .pr-sec-meter {
   opacity: .5;
   transition: width .3s var(--ease);
 }
+html.pr-on #pr-reader .pr-sec-btn:has(.pr-sec-num:empty) .pr-sec-meter { left: .2em; }
 html.pr-on[data-progress="0"] #pr-reader .pr-sec-meter { display: none; }
 html.pr-on #pr-reader .pr-sec-chev {
   flex: none;
@@ -433,7 +437,7 @@ html.pr-on #pr-reader .pr-sec[data-open="1"] .pr-sec-body { animation: pr-sec-in
    its head. Quiet until you are near it — it is an exit, not an invitation. */
 html.pr-on #pr-reader .pr-sec-fold {
   display: block;
-  margin: 2.2em 0 .2em auto;
+  margin: 2.2em 0 1.4em auto;
   padding: .35em .9em;
   border: 1px solid transparent;
   border-radius: 999px;

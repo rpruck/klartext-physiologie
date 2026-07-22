@@ -210,13 +210,34 @@
       // section — it rides at the head of the rail, not inside the first one.
       sec: s ? s.id : '',
       f: br && br.height ? clamp01((r.top - br.top) / br.height) : 0,
-      label: (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 80),
+      // Enough text for the list's two-line preview; the rail only ever shows
+      // the first few words of it.
+      label: (el.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 180),
     };
+  }
+  /* What the page calls itself — stored on each mark because nothing in the
+     URL says it. Same rule mountCrumb uses: only a heading at the top of the
+     page is its title, and only a top-level one (the accordion's own heads sit
+     inside a section). Deeper down it is body prose — Pruef.htm's first
+     heading is "Humor hilft", two thirds of the way in. */
+  function pageTitle() {
+    const kids = reader ? [...reader.children] : [];
+    const at = kids.findIndex((el) => /^H[1-3]$/.test(el.tagName));
+    if (at < 0 || at > 7) return '';
+    return (kids[at].textContent || '').replace(/\s+/g, ' ').trim().slice(0, 120);
   }
   function setMark() {
     const el = blockOnLine();
     if (!el) return;
     const m = describe(el);
+    /* A bookmark is read back from OTHER pages (bookmarks.js), so it carries
+       its own place with it. `p` is the pathname as the server spells it —
+       pageKey() lowercases, and physiologie.cc is case-sensitive. */
+    const s = SEGS.find((x) => x.id === m.sec);
+    m.t = Date.now();
+    m.p = location.pathname;
+    m.pageTitle = pageTitle();
+    m.secTitle = (s && s.title) || '';
     const store = rec();
     store.marks = store.marks || [];
     if (store.marks.some((x) => x.b === m.b && x.n === m.n)) { toast('Lesezeichen besteht bereits'); return; }
@@ -235,11 +256,30 @@
     paintMarks();
     if (!silent) toast('Lesezeichen entfernt', () => { store.marks.splice(Math.min(i, store.marks.length), 0, gone); PR.page && PR.page.save(); paintMarks(); });
   }
-  function gotoMark(m) {
+  function gotoMark(m, smooth) {
     const el = blockAt(m.b, m.n);
     if (!el) { toast('Diese Stelle ist nicht mehr auffindbar'); return; }
     PR.outline && PR.outline.reveal(el);
-    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    el.scrollIntoView({ block: 'center', behavior: smooth === false ? 'auto' : 'smooth' });
+  }
+  /* A bookmark on another page is a plain link — #pr-mark-<hash>-<n> is the
+     block anchor spelled into the URL, so the row needs no cross-navigation
+     handshake and the browser's own middle-click / new-tab / reload all work.
+     outline.applyState()'s goto() has already tried and shrugged at it: no
+     element carries that id. The hash stays in the URL, so a reload returns
+     here too. */
+  const MARK_HASH = /^pr-mark-([0-9a-z]+)-(\d+)$/;
+  function consumeHash() {
+    const m = MARK_HASH.exec(decodeURIComponent((location.hash || '').slice(1)));
+    if (!m) return;
+    const land = () => gotoMark({ b: m[1], n: +m[2] }, false);
+    land();
+    /* …and again once the page has stopped growing under us. At document_end
+       the figures are unloaded boxes and fitNatural() has yet to swap in their
+       true sizes, so a block landed on now drifts hundreds of pixels off as
+       everything above it settles. Landing is idempotent and instant. */
+    if (document.readyState === 'complete') { setTimeout(land, 250); return; }
+    window.addEventListener('load', () => { land(); setTimeout(land, 250); }, { once: true });
   }
   // The automatic one: where the reading line stood when the page was left.
   /* Where a mark stands in the page, as one comparable number: which segment,
@@ -333,9 +373,10 @@
     layout();
     measure();
     wireReset();
+    consumeHash();
 
     const btn = q('#bookmarkBtn');
-    if (btn) { btn.hidden = false; btn.onclick = setMark; }
+    if (btn) btn.onclick = setMark;
 
     // Click a tick or a label to travel there; a folded section opens first.
     const jump = (si, f) => {
@@ -383,12 +424,12 @@
   // pixels), so only the folded styling and the live measurement move.
   function refresh() { paint(); measure(); }
 
+  // The rail's own switch. Bookmarks are NOT the rail's feature — you can set
+  // one and read the list back with the ruler turned off, so the pill stays.
   function setVisible(v) {
     const rail = q('#pr-rail');
     if (rail) rail.classList.toggle('off', !v);
-    const btn = q('#bookmarkBtn');
-    if (btn) btn.hidden = !v;
   }
 
-  PR.progress = { init, refresh, layout, setVisible, setMark };
+  PR.progress = { init, refresh, layout, setVisible, setMark, gotoMark };
 })();

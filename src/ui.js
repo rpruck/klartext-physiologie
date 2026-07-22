@@ -15,14 +15,26 @@
   const PR = (window.__physioReskin ||= {});
   let host = null, shadow = null;
 
+  /* Unicode has no bookmark that isn't an emoji (🔖 paints in colour and in the
+     system's font, next to glyphs drawn in ours), so the ribbon is a path — and
+     the list beside it is drawn to the same weight rather than borrowed from
+     ☰/≡, which sit on a different baseline in every fallback font. */
+  const RIBBON = `<svg class="tb-glyph" viewBox="0 0 10 13" aria-hidden="true"><path d="M1 1.6h8v10.2l-4-3-4 3z"/></svg>`;
+  const LIST = `<svg class="tb-glyph tb-glyph-list" viewBox="0 0 13 10" aria-hidden="true"><path d="M1 1.4h11M1 5h11M1 8.6h7"/></svg>`;
+
   /* The icon buttons say what they do on hover (data-tip), not in the bar —
-     three words of German each would crowd out the two labelled controls. */
+     three words of German each would crowd out the two labelled controls.
+     Setting a bookmark and reading the book's bookmarks back are two halves of
+     one thing, so they are two halves of one pill. */
   const TOPBAR = `
     <div id="pr-topbar" part="topbar">
       <button class="tb-btn tb-icon" id="unpinAll" hidden data-tip="Alle Abbildungen lösen" aria-label="Alle Abbildungen lösen">⊘</button>
       <button class="tb-btn tb-icon" id="laneImg" data-tip="Bildspalte" aria-label="Bildspalte" aria-pressed="true">◧</button>
       <button class="tb-btn tb-icon" id="laneNotes" data-tip="Notizspalte" aria-label="Notizspalte" aria-pressed="true">◨</button>
-      <button class="tb-btn" id="bookmarkBtn" hidden title="Hier weiterlesen">⌑ Lesezeichen</button>
+      <div class="tb-split" id="bookmarkPill">
+        <button class="tb-btn tb-half" id="bookmarkBtn" data-tip="Hier ein Lesezeichen setzen" aria-label="Hier ein Lesezeichen setzen">${RIBBON}</button>
+        <button class="tb-btn tb-half" id="openMarks" data-tip="Lesezeichen des Buches" aria-label="Lesezeichen des Buches">${LIST}</button>
+      </div>
       <button class="tb-btn" id="openPanel">✦ Einstellungen</button>
     </div>`;
 
@@ -68,6 +80,19 @@
       <span class="divider"></span>
       <button class="act" data-act="note">✎ Notiz</button>
     </div>`;
+
+  /* The book's bookmarks, not the page's — the same drawer as Einstellungen,
+     because the list is a column of three-line rows and a popover under the
+     pill would have to scroll inside 30 characters of width. bookmarks.js
+     fills #marksBody. */
+  const MARKS = `
+    <aside class="panel" id="marks" aria-label="Lesezeichen">
+      <div class="panel-head">
+        <h2>Lesezeichen</h2><span class="bm-count" id="marksCount"></span><span class="spacer"></span>
+        <button class="panel-close" id="closeMarks" aria-label="Schließen">✕</button>
+      </div>
+      <div class="panel-body" id="marksBody"></div>
+    </aside>`;
 
   const PANEL = `
     <div class="backdrop" id="backdrop"></div>
@@ -236,7 +261,7 @@
     root.className = 'pr-ui-root';
     // one-time activation overlay (played once per session by activate.js)
     const ACTIVATE = `<div class="activate" id="activate"></div><div class="activate-line" id="activateLine"></div>`;
-    root.innerHTML = TOPBAR + RAIL + PINRAIL + NOTEGUTTER + LIGHTBOX + HLPOP + PANEL + TOASTER + ACTIVATE;
+    root.innerHTML = TOPBAR + RAIL + PINRAIL + NOTEGUTTER + LIGHTBOX + HLPOP + PANEL + MARKS + TOASTER + ACTIVATE;
     shadow.appendChild(root);
     PR.ui.root = root;
 
@@ -244,14 +269,30 @@
     return shadow;
   }
 
+  /* Two drawers now hang off the same backdrop (Einstellungen · Lesezeichen),
+     and they occupy the same edge — so opening either closes the other, and
+     the backdrop and Escape close whatever stands open. */
   function wirePanel() {
     const $ = (s) => shadow.querySelector(s);
-    const panel = $('#panel'), backdrop = $('#backdrop');
-    const open = () => { panel.classList.add('open'); backdrop.classList.add('show'); };
-    const close = () => { panel.classList.remove('open'); backdrop.classList.remove('show'); };
-    $('#openPanel').onclick = open;
-    $('#closePanel').onclick = close;
-    backdrop.onclick = close;
+    const backdrop = $('#backdrop');
+    const drawers = ['#panel', '#marks'].map($);
+    const closeDrawer = () => {
+      drawers.forEach((d) => d.classList.remove('open'));
+      backdrop.classList.remove('show');
+    };
+    const openDrawer = (sel) => {
+      drawers.forEach((d) => d.classList.toggle('open', d === $(sel)));
+      backdrop.classList.add('show');
+    };
+    $('#openPanel').onclick = () => openDrawer('#panel');
+    $('#closePanel').onclick = closeDrawer;
+    $('#closeMarks').onclick = closeDrawer;
+    backdrop.onclick = closeDrawer;
+    document.addEventListener('keydown', (ev) => {
+      if (ev.key === 'Escape' && drawers.some((d) => d.classList.contains('open'))) closeDrawer();
+    });
+    PR.ui.openDrawer = openDrawer;
+    PR.ui.closeDrawer = closeDrawer;
   }
 
   PR.ui = { mount };
