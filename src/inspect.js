@@ -26,8 +26,18 @@
   const PEEK = 80;              // of the window must stay reachable, as for pins
   const MIN_W = 320, MIN_H = 200;
   const $ = (s) => (PR.ui && PR.ui.shadow) ? PR.ui.shadow.querySelector(s) : null;
-  const vw = () => document.documentElement.clientWidth;
-  const vh = () => document.documentElement.clientHeight;
+  /* The book is served in QUIRKS mode — its HTML 4.0 Transitional doctype
+     carries no system identifier, so every page is BackCompat. There
+     `documentElement.clientHeight` is the height of the whole DOCUMENT (10 616px
+     on X.1), not the viewport, and a window sized off it opened seven screens
+     tall. document.scrollingElement is <body> in quirks and <html> in standards
+     and answers with the viewport in both — scrollbar excluded, which is what
+     the clamping wants (a strip under the scrollbar is not a strip). The dev
+     harness emits its own <!doctype html>, which is exactly why this never
+     showed up there. */
+  const vp = () => document.scrollingElement || document.documentElement;
+  const vw = () => vp().clientWidth || window.innerWidth;
+  const vh = () => vp().clientHeight || window.innerHeight;
 
   let reader = null, armed = false, open = false;
   let win = null, frame = null, rule = null, hints = null, btn = null;
@@ -48,13 +58,19 @@
     const w = Math.round(vw() * 0.9), h = Math.round(vh() * 0.7);
     return { w, h, x: Math.round((vw() - w) / 2), y: Math.round((vh() - h) / 2) };
   };
+  // Horizontally the window may be parked past an edge, as a pin may — PEEK of
+  // it is enough to get it back. Vertically it may not: the resize handle is in
+  // the bottom corner, and a window whose bottom is off screen can only be made
+  // bigger. So the height never exceeds the viewport and the whole frame stays
+  // between the two edges.
+  const EDGE = 8;
   function clamp(g) {
     const w = Math.max(MIN_W, Math.min(vw(), g.w));
-    const h = Math.max(MIN_H, Math.min(vh(), g.h));
+    const h = Math.max(MIN_H, Math.min(vh() - 2 * EDGE, g.h));
     return {
       w, h,
       x: Math.max(PEEK - w, Math.min(vw() - PEEK, g.x)),
-      y: Math.max(0, Math.min(vh() - 34, g.y)),   // never above the title bar
+      y: Math.max(EDGE, Math.min(vh() - h - EDGE, g.y)),
     };
   }
   function applyGeo() {
@@ -260,8 +276,13 @@
     hints.innerHTML = '<span class="ih-title">Bildschirmfoto</span>' +
       shortcuts().map(([k, t]) => '<span class="ih-row"><kbd>' + k + '</kbd>' + t + '</span>').join('');
 
+    // A record written while the quirks bug was live holds a height of several
+    // thousand pixels — a size no drag on this screen could have produced. If
+    // what was stored doesn't fit the screen it was never a choice, so take the
+    // default rather than clamping a number the user never picked.
     const stored = PR.store ? await PR.store.get('inspect') : null;
-    geo = clamp(Object.assign(defaultGeo(), stored || {}));
+    const fits = stored && stored.w <= vw() && stored.h <= vh();
+    geo = clamp(Object.assign(defaultGeo(), fits ? stored : {}));
 
     // The button is the way out as well as the way in — hunting for the ✕ at a
     // corner of a window you just dragged somewhere is not a way out.

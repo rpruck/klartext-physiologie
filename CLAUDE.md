@@ -273,6 +273,13 @@ memory, `reskin-testing`):
   `curl -s http://physiologie.cc/<page> > .test/<page>`.
 - `python3 dev/mkharness.py .test/<page> dev/harness_<x>.html` inlines the body and loads the real
   `src/*` chain (with an mtime cache-buster). Drive with the Playwright MCP.
+- **The book runs in quirks mode**, and the harness carries the page's own doctype so it does too.
+  `<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">` has no system identifier, which
+  makes every page `BackCompat` (I.1's doctype is worse still — its *name* is `doctype`, not
+  `html`). The consequence that bites: `document.documentElement.clientHeight` is the height of the
+  **document**, not the viewport (10 616px on X.1). Measure the viewport off
+  `document.scrollingElement` — `<body>` in quirks, `<html>` in standards, the viewport in both.
+  The harness used to emit a clean `<!doctype html>`, which hid this class of bug entirely.
 - Representative spread: I.0 (callout-heavy), I.1 (densest, ~825 KB), VIII.2, Einheiten (tables),
   I.htm (hub), Pruef.htm (TOC), home.
 - The harness stubs `chrome.storage.local` over `localStorage` (`pr.harness.*`) and

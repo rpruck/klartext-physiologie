@@ -131,8 +131,12 @@
   // window — but never so far that there is nothing left to grab it by.
   const PEEK = 44;
   // clientWidth, not innerWidth: the scrollbar is not a place you can grab a
-  // pin by, so a strip parked under it is not a strip.
-  const vw = () => document.documentElement.clientWidth || window.innerWidth;
+  // pin by, so a strip parked under it is not a strip. Asked of
+  // document.scrollingElement rather than documentElement, because the book is
+  // served in quirks mode (its doctype has no system identifier) and there
+  // documentElement measures the DOCUMENT — on a page with a table wider than
+  // the window, that clamped pins against a viewport that isn't there.
+  const vw = () => (document.scrollingElement || document.documentElement).clientWidth || window.innerWidth;
 
   // The margins the text column is not using — measured, not derived, because
   // a collapsed lane slides the column sideways (content.css --lane-shift) and

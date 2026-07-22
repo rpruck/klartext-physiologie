@@ -5,6 +5,13 @@ BASE='http://localhost:8756'
 # cache-buster = newest mtime across src/, so the browser refetches after edits
 V = int(max(os.path.getmtime(p) for p in pathlib.Path('src').glob('*')))
 m = re.search(r'<body([^>]*)>(.*)</body>', src, re.S|re.I)
+# Carry the page's OWN doctype. The book's is HTML 4.0 Transitional with no
+# system identifier, which puts every page in QUIRKS mode — where
+# documentElement.clientHeight measures the document, not the viewport. Emitting
+# a clean <!doctype html> here made the harness standards-mode and hid a whole
+# class of geometry bug that only ever bites on the live site.
+dt = re.search(r'<!DOCTYPE[^>]*>', src, re.I)
+doctype = dt.group(0) if dt else '<!doctype html>'
 # Keep the real <body> attributes (inline bgcolor/style/link colours) so the
 # harness reproduces what the extension actually faces on the live page.
 body_attrs = m.group(1) if m else ''
@@ -54,7 +61,7 @@ stub = '''<script>
 })();
 </script>
 '''.replace('BASE_', BASE).replace('V_', str(V)).replace('SELF_', pathlib.Path(sys.argv[1]).name.lower())
-harness = f'''<!doctype html><html lang="de"><head><meta charset="utf-8">
+harness = f'''{doctype}<html lang="de"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <base href="http://physiologie.cc/">
 <link rel="stylesheet" href="{BASE}/src/boot.css?v={V}">
