@@ -53,7 +53,7 @@
   const DECO = new Set(['greenbutton.jpg',
     'begriff.jpg', 'begriffe.jpg', 'exkurs.jpg', 'spruchband.jpg', 'snake.jpg',
     'column.gif', 'smile1.jpeg', 'openacc.jpg', 'lstrc_archivelogo.png', 'merke.jpg', 'merke2.jpg',
-    'pharm.jpg', 'histor.jpg', 'fkh.jpg', 'anw.jpg', 'orientierung.jpg', 'etym.jpg', 'vitru.jpg',
+    'pharm.jpg', 'histor.jpg', 'fkh.jpg', 'anw.jpg', 'orientierung.jpg', 'etym.jpg',
     'life_has_meaning.jpg', 'dt_real.jpg', 'ohne_physio.jpeg', 'ohne_physio.jpg']);
 
   /* ── section labels ─────────────────────────────────────────────────────
@@ -68,7 +68,7 @@
      Anw.jpg reads "Klinik · Alltag · Praxis · Anwendung", but every link that
      points at its anchor calls the section "Praktische Aspekte" — use the
      book's own words for it. FKH.jpg ("FEEDBACK") sits inside a mailto: in the
-     footer and vitru.jpg is a bullet glyph, not a label; both stay deco. */
+     footer, so it stays deco. */
   const LABELS = {
     'histor.jpg': { text: 'Historisches', kind: 'wrap' },
     'pharm.jpg': { text: 'Pharmakologie', kind: 'wrap' },
@@ -85,6 +85,19 @@
   // The badge that marks a word as defined in this page's Begriffe list. It
   // always points at the page's own #BEG, so the definitions are local.
   const GLOSS_BADGE = 'begriff.jpg';
+  /* ── the section strip ──────────────────────────────────────────────────
+     Near the top of every section page the author prints his own table of
+     contents: a row of links into the page, one per section, separated by a
+     30×34 glyph. Dropped with the rest of the deco it left a run-on line of
+     links, and with it went the only statement the book makes about which of
+     a page's headings are SECTIONS — I.1 names nine of its forty-six, and
+     every one of those nine anchors lands on a heading. outline.js builds the
+     page's collapsible sections from it.
+     The glyph is the discriminator, not the position: directly underneath sits
+     a second, identically-shaped row of links to the page's definitions, and
+     that one is separated by dot_silver.jpg under a DEF_kl.jpg "Definition"
+     label. Same shape, different glyph, different meaning. */
+  const SPINE_SEP = 'vitru.jpg';
   // NB: no /^hhs/ prefix — that hid the author portrait under Strategy A.
   const DECO_PREFIX = /^(reise|welcome|dilbert|smiley|aeskulap|saeule|spruch)/i;
   const isDecoName = (f) => { f = f.toLowerCase(); return DECO.has(f) || DECO_PREFIX.test(f); };
@@ -341,6 +354,7 @@
           // itself has nothing left to say once the word is out.
           if (lab && lab.kind !== 'wrap') { toks.push({ k: 'label', text: lab.text, banner: lab.kind === 'banner' }); continue; }
           if (f === GLOSS_BADGE) { toks.push({ k: 'gloss' }); continue; }
+          if (f === SPINE_SEP) { toks.push({ k: 'sep' }); continue; }
           const c = classifyImg(n, counts);
           if (c.kind === 'fig') toks.push({ k: 'fig', ...c });
           else if (c.kind === 'nav') toks.push({ k: 'nav', href: c.href, label: c.label });
@@ -446,6 +460,7 @@
       else if (t.k === 'anchor') cur.push({ text: '', anchor: t.id });
       else if (t.k === 'bullet') cur.push({ text: '', bullet: t.src });
       else if (t.k === 'gloss') cur.push({ text: '', gloss: true });
+      else if (t.k === 'sep') cur.push({ text: '', sep: true });
       else if (t.k === 'br' || t.k === 'block') flush();
       else if (t.k === 'fig' || t.k === 'nav' || t.k === 'table' || t.k === 'label') { flush(); lines.push({ special: t }); }
       else if (t.k === 'hr') { flush(); lines.push({ special: { k: 'hr' } }); }
@@ -465,6 +480,36 @@
       return null;
     };
     const lineLinked = (l) => { const p = (l.runs || []).filter((r) => (r.text || '').trim()); return p.length > 0 && p.every((r) => r.st && r.st.href); };
+    /* The section strip: a line of links to this page cut into entries by the
+       separator glyph. → [{ runs, href }] or null.
+       An entry is not always one clean <a>. The source splits some across two
+       <a>s sharing a target ("Bewegung und" + " Transport, Kompartimentierung")
+       and leaves the chemistry outside the link altogether ("Calcium" then
+       "(Ca++)"), so an entry is everything between two separators, aimed at the
+       first link in it. What it may NOT hold is much unlinked text, and it may
+       not OPEN with any — a line like "Natriumkanäle · Spannungsgesteuert · …"
+       is a heading with a strip after it, and folding the two together would
+       eat the heading. */
+    const SPINE_LOOSE = 40;
+    const spineItems = (l) => {
+      const items = []; let seps = 0, cur = null;
+      for (const r of (l.runs || [])) {
+        if (r.sep) { seps++; cur = null; continue; }
+        if (r.anchor) { if (cur) cur.runs.push(r); continue; }
+        const href = r.st && r.st.href;
+        const txt = (r.text || '').trim();
+        if (!cur) {
+          if (!href) { if (txt) return null; continue; }   // padding before the entry
+          cur = { href, runs: [], loose: 0 };
+          items.push(cur);
+        } else if (!href) {
+          cur.loose += txt.length;
+          if (cur.loose > SPINE_LOOSE) return null;
+        }
+        cur.runs.push(r);
+      }
+      return (seps >= 2 && items.length >= 3) ? items : null;
+    };
     // "Abbildung: Hierarchie-Ebenen…" and "Nach: Mommaerts et al…." both have
     // the shape of a glossary entry. Left unguarded the caption seeds glossFlag
     // and its own source line is then emitted as a definition, detached from
@@ -555,6 +600,8 @@
         else flushGroups();
         continue;
       }
+      const spine = spineItems(l);
+      if (spine) { flushGroups(); blocks.push({ t: 'spine', items: spine, anchors: drain() }); continue; }
       if (l.ladder) {
         if (!ladder) { flushGroups(); ladder = { items: [], anchors: drain() }; }
         ladder.items.push({ runs: l.runs, arrow: l.ladder === 'arrow' });
@@ -1042,6 +1089,19 @@
           d.appendChild(e);
         }
         box.appendChild(d);
+      }
+      else if (b.t === 'spine') {
+        const nav = document.createElement('nav'); nav.className = 'pr-spine';
+        for (const it of b.items) {
+          const a = document.createElement('a');
+          a.className = 'pr-spine-link'; a.href = it.href;
+          // The entry IS the link, so its runs must not carry one of their own —
+          // renderRuns would emit a second <a> inside this one.
+          a.innerHTML = renderRuns(it.runs.map((r) => Object.assign({}, r,
+            { st: Object.assign({}, r.st, { href: null, term: undefined }) }))).trim();
+          if (a.textContent.trim()) nav.appendChild(a);
+        }
+        if (nav.children.length) box.appendChild(nav);
       }
       else if (b.t === 'table') box.appendChild(renderTable(b, counts, baseline));
     }

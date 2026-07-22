@@ -288,6 +288,133 @@ html.pr-on[data-progress="1"] #pr-reader .pr-linklist p:has(a.pr-seen) > .pr-lin
 /* the hubs bold their index, Pruef.htm doesn't — read as one list either way */
 html.pr-on #pr-reader .pr-linklist strong { font-weight: inherit; }
 
+/* ── the author's own section strip (reskin.js emits <nav class="pr-spine">) ─
+   A row of links into the page, cut into entries by a glyph the reskin used to
+   drop. The page's top strip is consumed by outline.js (the collapsed section
+   list says the same thing, right underneath); what stays visible are the
+   sub-indices further down, which name the parts of the section they open. */
+html.pr-on #pr-reader .pr-spine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 .2em;
+  margin: 1.6em 0;
+  text-align: left;
+}
+html.pr-on #pr-reader .pr-spine a.pr-spine-link {
+  font-family: var(--font-label);
+  font-size: .74rem;
+  line-height: 1.7;
+  letter-spacing: .01em;
+  background: none;
+  color: var(--ink-soft);
+  transition: color .2s var(--ease);
+}
+html.pr-on #pr-reader .pr-spine a.pr-spine-link:hover { color: var(--accent-ink); }
+/* The separator is ours now, not the author's picture of one. It hangs off the
+   entry BEFORE it, so a wrapping strip never starts a line with a lone dot. */
+html.pr-on #pr-reader .pr-spine a.pr-spine-link:not(:last-child)::after {
+  content: "·";
+  margin: 0 .35em 0 .55em;
+  color: var(--ink-soft);
+  opacity: .45;
+}
+
+/* ── sections (outline.js wraps the page into <section class="pr-sec">) ────
+   Collapsed, the page reads as a list of its own contents: a numbered row per
+   section, hairline-ruled, with a meter under the title saying how much of it
+   has been read. The strip the outline was built from says the same thing one
+   block above, so it goes while the accordion stands. */
+html.pr-on[data-collapse="1"] #pr-reader .pr-spine-used { display: none; }
+/* the Begriffe list is folded under a head that already says "Begriffe" */
+html.pr-on[data-collapse="1"] #pr-reader .pr-sec-body > section.pr-gloss > .pr-label { display: none; }
+html.pr-on #pr-reader .pr-sec-body > section.pr-gloss { margin: 0; }
+
+html.pr-on #pr-reader .pr-sec { margin: 0; }
+html.pr-on #pr-reader .pr-sec-head { margin: 0; font-size: inherit; font-weight: inherit; }
+html.pr-on #pr-reader .pr-sec-head::before { display: none; }   /* not the h2 accent rule */
+html.pr-on #pr-reader .pr-sec-btn {
+  display: flex;
+  align-items: baseline;
+  gap: .85em;
+  width: 100%;
+  position: relative;
+  padding: .95em .2em;
+  border: 0;
+  border-top: 1px solid var(--hair-soft);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: color .2s var(--ease);
+}
+html.pr-on #pr-reader .pr-sec:last-child .pr-sec-btn { border-bottom: 1px solid var(--hair-soft); }
+html.pr-on #pr-reader .pr-sec[data-open="1"]:last-child .pr-sec-btn { border-bottom: 0; }
+html.pr-on #pr-reader .pr-sec-btn:hover { color: var(--accent-ink); }
+html.pr-on #pr-reader .pr-sec-num {
+  flex: 0 0 1.6em;
+  font-family: var(--font-label);
+  font-size: .74em;
+  letter-spacing: .02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  transition: color .2s var(--ease);
+}
+html.pr-on #pr-reader .pr-sec-btn:hover .pr-sec-num { color: var(--accent); }
+html.pr-on #pr-reader .pr-sec-title {
+  flex: 1;
+  font-size: 1.06em;
+  line-height: 1.3;
+  font-weight: 500;
+  text-wrap: balance;
+}
+/* how far into this section the reader got — hung under the title, so a
+   collapsed row still carries its progress (progress.js writes --read) */
+html.pr-on #pr-reader .pr-sec-meter {
+  position: absolute;
+  left: 2.45em;
+  bottom: .62em;
+  width: calc(var(--read, 0) * 42px);
+  height: 2px;
+  border-radius: 2px;
+  background: var(--accent);
+  opacity: .5;
+  transition: width .3s var(--ease);
+}
+html.pr-on[data-progress="0"] #pr-reader .pr-sec-meter { display: none; }
+html.pr-on #pr-reader .pr-sec-chev {
+  flex: none;
+  width: .5em;
+  height: .5em;
+  border-right: 1.5px solid var(--ink-soft);
+  border-bottom: 1.5px solid var(--ink-soft);
+  transform: rotate(45deg) translate(-.1em, -.1em);
+  transition: transform .25s var(--ease), border-color .2s var(--ease);
+}
+html.pr-on #pr-reader .pr-sec[data-open="1"] .pr-sec-chev { transform: rotate(-135deg) translate(-.16em, -.16em); }
+html.pr-on #pr-reader .pr-sec-btn:hover .pr-sec-chev { border-color: var(--accent); }
+
+/* A folded body is hidden by content-visibility, which still leaves the
+   element itself in the flow — with padding it kept a few pixels of height and
+   read the same as a section you had scrolled through. It must measure zero. */
+html.pr-on #pr-reader .pr-sec[data-open="1"] > .pr-sec-body { padding-top: .4em; }
+html.pr-on #pr-reader .pr-sec-body > *:first-child { margin-top: .3em; }
+html.pr-on #pr-reader .pr-sec-body > h2:first-child::before { display: none; }
+html.pr-on #pr-reader .pr-sec[data-open="1"] .pr-sec-body { animation: pr-sec-in .28s var(--ease); }
+@keyframes pr-sec-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+
+/* setting off → the sections stay built (the progress rail is drawn from them)
+   but the page reads exactly as it did before */
+html.pr-on[data-collapse="0"] #pr-reader .pr-sec-head { display: none; }
+html.pr-on[data-collapse="0"] #pr-reader .pr-sec-body { padding-top: 0; }
+
+/* a folded section must still print, and still be findable */
+@media print {
+  html.pr-on #pr-reader .pr-sec-body { content-visibility: visible !important; }
+  html.pr-on #pr-reader .pr-sec-chev { display: none; }
+}
+
 /* ── definition / glossary lists (reskin.js emits <dl class="pr-defs">) ─── */
 html.pr-on #pr-reader dl.pr-defs {
   margin: 1.4em 0;

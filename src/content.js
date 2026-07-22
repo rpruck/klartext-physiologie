@@ -53,7 +53,7 @@
     } else {
       d.dataset.bg = 'neutral'; d.dataset.align = 'justify';
       d.dataset.hidedeco = '1'; d.dataset.figframe = 'hairline'; d.dataset.motion = '1';
-      d.dataset.progress = '1';
+      d.dataset.progress = '1'; d.dataset.collapse = '1'; d.dataset.rail = '1';
     }
 
     // 6 · Turn the reskin on (CSS was inert until now).
@@ -63,12 +63,17 @@
     //     reveal, so the markers are there on first paint.
     if (PR.visited) await PR.visited.apply(reader);
 
-    // 8 · Wire the study tools, then restore this page's annotations.
+    // 8 · Load this page's record (annotations, open sections, read progress),
+    //     then build the section outline — with every section still OPEN, so
+    //     assignBlockIds measures real block ancestry and restore() can wrap
+    //     its marks. Only after that does applyState() fold anything away.
+    if (PR.page) await PR.page.load();
+    if (PR.outline) PR.outline.build(reader);
     if (PR.anchor && PR.anchor.assignBlockIds) PR.anchor.assignBlockIds(reader);
     if (PR.tools && PR.tools.init) PR.tools.init();
-    const pageKey = PR.store ? PR.store.pageKey() : null;
-    const page = pageKey ? (await PR.store.get(pageKey)) || {} : {};
-    if (PR.tools && PR.tools.restore) PR.tools.restore(page);
+    if (PR.tools && PR.tools.restore) PR.tools.restore();
+    if (PR.outline) PR.outline.applyState();
+    if (PR.progress) PR.progress.init(reader);
 
     // 9 · Reveal the finished page + play the one-time activation animation.
     reveal();

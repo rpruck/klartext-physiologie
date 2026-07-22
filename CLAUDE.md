@@ -81,6 +81,54 @@ prose may legitimately open "Nach der Geburt…"). Both halves render inside one
 as `.pr-figcap-title` + `.pr-figcap-src`, styled to match the box title/sub pair above. Left merged,
 the caption lines also seed the glossary heuristic — hence the `CAP` guards in `isGloss`/`isEntry`.
 
+- **The section strip** — near the top of every section page the author prints his own contents:
+  a row of links into the page separated by `vitru.jpg` (30×34). It is the only statement the
+  book makes about which of a page's headings are *sections*: I.1 names nine of its forty-six,
+  and every one of those nine anchors lands on a heading. `SPINE_SEP` in `reskin.js` reads it
+  back as `<nav class="pr-spine">`; `outline.js` builds the page's collapsible sections from it.
+  The glyph is the discriminator, not the position — directly underneath sits an
+  identically-shaped row of links to the page's *definitions*, separated by `dot_silver.jpg`
+  under a `DEF_kl.jpg` label. An entry is everything between two separators, aimed at the first
+  link in it: the source splits some entries across two `<a>`s sharing a target ("Bewegung und" +
+  " Transport, Kompartimentierung") and leaves the chemistry outside the link ("Calcium" then
+  "(Ca++)"). It may not *open* with unlinked text — "Natriumkanäle · Spannungsgesteuert · …" is a
+  heading with a strip after it. The mid-page strips (I.1 has six) are the same shape and render
+  as compact sub-indices.
+
+### Sections and reading progress
+
+A section page is otherwise one uninterrupted column, so `src/outline.js` folds it into an
+accordion and `src/progress.js` draws a ruler of it down the right edge.
+
+- **`outline.js`** — the spine above the first `H2` gives the sections; the rest of the preamble
+  is swept for the `#PrA`/`#cm` links the author sets off with `cloud3.jpg`/`redball.gif`
+  (skipping asides, and requiring the anchor to *open* its block, or the Definition shortcuts
+  would cut sections in half); anything past the last of those falls back to one section per
+  `H2`. Fewer than three sections, or under 6 000 characters of text (Einheiten is 2 000; I.0,
+  the shortest real page, is 34 800), and nothing is built. The row title is the **strip's**
+  label, not the target heading — "Zellmembran" scans better than "Zellmembran: Panta rhei", and
+  it works where the target is a paragraph (I.0). The page's Begriffe list is folded too,
+  unnumbered: 25 entries of etymology above everything else pushed the whole list below the fold.
+  Bodies are hidden with **`hidden="until-found"`**, so Ctrl+F still finds folded text and
+  reveals it via `beforematch` — that is the whole reason the accordion doesn't break the
+  browser's own search.
+- **`progress.js`** — ticks are shared between sections by *text weight*, not pixels, so folding
+  a section doesn't make the rail jump. Read state is a high-water fraction per section; read
+  ticks fade. One automatic "zuletzt gelesen" mark plus any number of manual bookmarks, anchored
+  by the `.pr-block` content hash like annotations are.
+
+Two traps this cost real time on, both from `content-visibility: hidden`:
+
+- A folded body is **still an element in the flow** — with padding it kept a few pixels of height
+  and everything you scrolled past counted as read. `.pr-sec-body` gets its padding only when open.
+- Descendants of a folded subtree keep reporting the geometry they had when last on screen, so
+  `getBoundingClientRect()` cannot answer "is this visible". `closest('[hidden]')` can, and
+  `layoutNotes`/`blockOnLine` both use it.
+
+`content.js`'s order is load-bearing: **build the outline with every section open** → `assignBlockIds`
+→ `tools.restore` → *then* `applyState()` folds. Reversed, block ancestry is measured through
+hidden nodes and no highlight can be restored.
+
 ### Where-am-I (chapter / section)
 
 Nothing in a page's content states its place in the book, so `pageRef()` derives it from the URL
@@ -102,9 +150,10 @@ to it (`PR.reskin`, `PR.settings`, `PR.ui`, `PR.tools`, `PR.anchor`, `PR.fonts`,
   paint the user's cached paper colour. `body` is `visibility:hidden` (layout preserved) until the
   reskin is ready, so `getComputedStyle().fontSize` stays truthful during heading measurement.
 - **`document_end` chain** (order fixed in `manifest.json`): `store → visited → anchor → fonts →
-  reskin → ui → tools → settings → activate → content`. `src/content.js` is the orchestrator; the critical
-  invariant is **measure original sizes → build reader → apply settings → add `html.pr-on` → reveal
-  (`html.pr-ready`)**. `content.css` is injected but inert until `.pr-on`.
+  reskin → ui → tools → outline → progress → settings → activate → content`. `src/content.js` is the
+  orchestrator; the critical invariant is **measure original sizes → build reader → apply settings →
+  add `html.pr-on` → build the outline open → assign block ids → restore annotations → fold →
+  reveal (`html.pr-ready`)**. `content.css` is injected but inert until `.pr-on`.
 
 Key files:
 
@@ -114,9 +163,11 @@ Key files:
 | `src/content.css` | Light-DOM reader styles; every rule gated `html.pr-on` and scoped to `#pr-reader` |
 | `src/settings.js` | Einstellungen panel state; `apply()` writes CSS vars on `:root` + `data-*` on `<html>` |
 | `src/ui.js` / `src/ui.css` | Injected chrome in **one Shadow DOM** (host on `<html>`); `ui.css` fetched via `chrome.runtime.getURL` |
+| `src/outline.js` | The page's sections, read off the author's strip, and the accordion over them |
+| `src/progress.js` | The reading rail: read-state per section, bookmarks, per-page reset |
 | `src/tools.js` | Study interactions (highlight / notes / pins / lightbox / glossary hover card) |
 | `src/anchor.js` | Self-healing annotation anchoring — the biggest correctness surface |
-| `src/store.js` | `chrome.storage.local` wrapper + a tiny synchronous localStorage mirror for `boot.js` |
+| `src/store.js` | `chrome.storage.local` wrapper, the shared per-page record (`PR.page`), and a tiny synchronous localStorage mirror for `boot.js` |
 | `src/visited.js` | Records pages read (storage key `visited`) and tags links to them `.pr-seen`; off (record and all) when the `progress` setting is false, which content.css also gates the markers on via `html.pr-on[data-progress="1"]` |
 | `src/fonts.js` | Registers the bundled woff2 faces from `fonts/` |
 | `popup.html` / `src/popup.js` | Toolbar on/off switch |

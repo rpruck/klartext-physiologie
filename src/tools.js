@@ -15,16 +15,11 @@
   const qa = (s) => (PR.ui && PR.ui.shadow) ? [...PR.ui.shadow.querySelectorAll(s)] : [];
 
   // ── shared per-page state ────────────────────────────────────────────────
-  let PAGE = { highlights: [], pins: [] };
+  // The record lives in store.js (PR.page) — outline and progress write into
+  // the same object, so no module may own the key alone.
+  const PAGE = PR.page ? PR.page.rec : { highlights: [], pins: [] };
   let PINS = PAGE.pins;
-  let saveTimer = null;
-  function persist() {
-    if (!PR.store) return;
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      PR.store.set(PR.store.pageKey(), { highlights: PAGE.highlights, pins: PAGE.pins });
-    }, 120); // debounce rapid edits (drag-resize, reorder)
-  }
+  const persist = () => { PR.page && PR.page.save(); };
 
   // ── toaster (sonner-style undo) ──────────────────────────────────────────
   function showToast(msg, opts = {}) {
@@ -387,8 +382,16 @@
   let notesRaf = 0;
   function layoutNotes() {
     const gutter = q('#noteGutter'); if (!gutter) return;
-    const withNotes = HLS().filter((h) => h.note != null); // null = none, '' = empty-but-open
-    gutter.querySelectorAll('.note').forEach((n) => { if (!withNotes.find((h) => h.id === n.dataset.id)) n.remove(); });
+    /* null = none, '' = empty-but-open. A mark folded away inside a collapsed
+       section has no box to align to, so its note leaves the gutter entirely
+       rather than sitting on at its last position, orphaned from its text.
+       Asked by geometry this looks fine — Chrome keeps the LAST known rect for
+       a content-visibility:hidden subtree, so a folded mark still reports the
+       box it had when it was on screen. The attribute is the truth. */
+    const withNotes = HLS().filter((h) => h.note != null).map((h) =>
+      ({ h, mark: document.querySelector('#pr-reader mark.hl[data-hid="' + h.id + '"]') }))
+      .filter((o) => o.mark && !o.mark.closest('[hidden]'));
+    gutter.querySelectorAll('.note').forEach((n) => { if (!withNotes.find((o) => o.h.id === n.dataset.id)) n.remove(); });
     const gutterTop = gutter.getBoundingClientRect().top; // fixed → viewport coords
     // -Infinity, not 0: clamping to the gutter top made every note whose mark
     // had scrolled off pile up there, and on a page with many notes that stack
@@ -396,8 +399,6 @@
     // with their marks and are clipped by the gutter's overflow.
     let lastBottom = -Infinity;
     withNotes
-      .map((h) => ({ h, mark: document.querySelector('#pr-reader mark.hl[data-hid="' + h.id + '"]') }))
-      .filter((o) => o.mark)
       .sort((a, b) => a.mark.getBoundingClientRect().top - b.mark.getBoundingClientRect().top)
       .forEach(({ h, mark }) => {
         let note = gutter.querySelector('.note[data-id="' + h.id + '"]');
@@ -517,9 +518,9 @@
     window.addEventListener('resize', () => { relayout(); reflowPins(); });
   }
 
-  function restore(page) {
-    PAGE.highlights = (page && page.highlights) || [];
-    PAGE.pins = (page && page.pins) || [];
+  // The record is already loaded (content.js awaits PR.page.load()); this just
+  // wires the DOM up to it.
+  function restore() {
     PINS = PAGE.pins;
     renderPins();
     restoreHighlights();

@@ -50,6 +50,11 @@ motion that stays quiet.
   back to its hub. Index entries on hub pages get numbered the same way.
 - **A real type hierarchy**, ranked from the *original* computed font sizes rather than guessed:
   titles, sections, run-in subheads, body.
+- **The page opens as a list of its own contents.** A section page is otherwise one wall of text —
+  I.1 alone is 880 blocks under 47 headings. The author names his sections once, at the top, as a
+  row of links separated by a small glyph; the extension reads that row back out and folds the page
+  into those sections, all collapsed. Click one to read it; what you leave open is remembered.
+  Ctrl+F still finds text inside a folded section and opens it for you.
 - **Figures at their own resolution**, wrapped with their caption and click-to-zoom. The decorative
   layer — repeated arrows, pointing fingers, spacer gifs, coloured dots — is hidden; navigation
   button-images become plain text links.
@@ -59,6 +64,13 @@ motion that stays quiet.
   definition lists.
 - **Read-tracking.** Every page you open is recorded locally, and links pointing to pages you have
   already read are marked — worth a lot in a book of 200+ near-identical index entries.
+- **A reading rail** down the right edge: one hairline tick per unit of the page, grouped by
+  section. The ticks behind you fade as you read, so the page quietly shows how far you have got —
+  on the rail and as a small meter under each collapsed section title. Hover it for the section
+  names, the percentage and a reset; click a tick to travel there.
+- **Bookmarks.** The rail keeps one automatic mark at the spot you last left off, so skimming ahead
+  never loses it, and **⌑ Lesezeichen** drops as many of your own as you like. Click a mark to jump
+  back, hover it for the ✕ — with an undo toast, like everything else here.
 - The image-only landing page gets its own hero; in-page anchors (`#Z_Golgiapparat` and friends)
   keep resolving.
 
@@ -92,7 +104,7 @@ they hold even if the surrounding page shifts (`src/anchor.js`).
 | **Layout** | Textbreite (680 px) · Absatzabstand · Textsatz — linksbündig / **Blocksatz** |
 | **Farbe** | Akzentfarbe — **Physio-Türkis `#0e8373`** + Blau · Violett · Terrakotta · Moos + free picker<br>Hintergrund — **Neutral** · Papier · Weiß · Sepia · Dunkel |
 | **Bilder** | Dekobilder ausblenden (on) · Abbildungsrahmen — **Haarlinie** / Schatten / ohne |
-| **Lesefortschritt** | Gelesenes markieren (on) · *• Gelesenes vergessen* |
+| **Lesen** | Abschnitte einklappen (on) · Fortschrittsleiste (on) · Gelesenes markieren (on) · *• Gelesenes vergessen* |
 | **Bewegung** | Animationen (on) |
 |  | *↺ Zurücksetzen* |
 
@@ -110,21 +122,23 @@ semantic block model, and emits clean HTML into a fresh `<main id="pr-reader">`.
 Two ordering rules hold the whole thing together: `boot.css`/`boot.js` run at `document_start` to
 kill the flash of the original page (the body is hidden but still laid out, so measuring stays
 truthful), and the `document_end` chain then follows a fixed sequence — **measure the original font
-sizes → build the reader → apply settings → switch the reskin on (`html.pr-on`) → reveal
-(`html.pr-ready`)**.
+sizes → build the reader → apply settings → switch the reskin on (`html.pr-on`) → fold it into
+sections (after the annotations are back, never before) → reveal (`html.pr-ready`)**.
 
 ```
 manifest.json          MV3; matches http://(www.)physiologie.cc/*
 popup.html             toolbar on/off switch
 src/
   boot.css · boot.js   document_start: no flash of the original page
-  store.js             chrome.storage.local wrapper (settings global · annotations per page)
+  store.js             chrome.storage.local wrapper (settings global · one record per page)
   visited.js           records pages read; tags links to them
   anchor.js            self-healing annotation anchoring (content hash + text quote)
   fonts.js             @font-face for the bundled woff2
   reskin.js            extract & re-render: block model → clean HTML, crumb, figures, tables
   ui.js · ui.css       all injected chrome, in one Shadow DOM
   tools.js             lightbox · pins · highlights · notes · toasts
+  outline.js           the page's sections, read off the author's strip; the accordion
+  progress.js          the reading rail: read-state per section · bookmarks · reset
   settings.js          the ✦ Einstellungen panel; writes CSS vars on :root
   activate.js          the once-per-session turn-on animation
   content.js           document_end orchestrator

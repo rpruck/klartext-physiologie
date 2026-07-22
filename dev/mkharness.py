@@ -10,12 +10,18 @@ m = re.search(r'<body([^>]*)>(.*)</body>', src, re.S|re.I)
 body_attrs = m.group(1) if m else ''
 body = m.group(2) if m else src
 scripts = ''.join(f'<script src="{BASE}/src/{f}?v={V}"></script>\n' for f in
-  ['store.js','visited.js','anchor.js','fonts.js','reskin.js','ui.js','tools.js','settings.js','activate.js','content.js'])
+  ['store.js','visited.js','anchor.js','fonts.js','reskin.js','ui.js','tools.js','outline.js','progress.js',
+   'settings.js','activate.js','content.js'])
 # A localStorage-backed chrome.storage.local, so anything that persists
 # (settings, annotations, the visited record) is exercisable here too.
 # ?seen=/i.1.htm,/i.2.htm preseeds the visited record before boot.
 stub = '''<script>
 (function () {
+  // Which page this harness stands in for. The <base href> makes the body's
+  // links resolve to physiologie.cc while location.pathname stays /dev/…, so
+  // "does this link point at the page I am on?" can't be answered from the URL
+  // here. Only the harness needs it; on the live site pathname is the truth.
+  window.__prSelfFile = 'SELF_';
   const K = (k) => 'pr.harness.' + k;
   const rd = (k) => { try { const v = localStorage.getItem(K(k)); return v == null ? undefined : JSON.parse(v); } catch (e) { return undefined; } };
   window.chrome = window.chrome || {};
@@ -34,7 +40,7 @@ stub = '''<script>
   }
 })();
 </script>
-'''.replace('BASE_', BASE).replace('V_', str(V))
+'''.replace('BASE_', BASE).replace('V_', str(V)).replace('SELF_', pathlib.Path(sys.argv[1]).name.lower())
 harness = f'''<!doctype html><html lang="de"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <base href="http://physiologie.cc/">

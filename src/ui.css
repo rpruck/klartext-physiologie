@@ -22,6 +22,9 @@
   color: var(--ink);
   font-size: 16px;
   line-height: 1.4;
+  /* the reading rail's strip along the right edge; the note gutter and the
+     toaster keep clear of it rather than sitting on its ticks */
+  --rail-w: 1.1rem;
 }
 .pr-ui-root * { box-sizing: border-box; }
 
@@ -132,6 +135,91 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
 .reset.armed { color: var(--accent-ink); border-color: var(--accent-line); background: var(--accent-tint); }
 .saved-note { font-family: var(--font-label); font-size: .6rem; letter-spacing: .06em; color: var(--ink-soft); margin-top: .9rem; opacity: .7; }
 
+/* ── reading rail (progress.js) ─────────────────────────────────────────
+   A ruler of the page's sections down the right edge: one tick per unit of
+   text, the ones you have read faded back, the one you are on in the accent.
+   Quiet by default — labels, marks and the readout only come out on hover. */
+.pr-rail {
+  position: fixed;
+  top: 4.6rem; bottom: 3.2rem; right: .5rem;
+  width: var(--rail-w);
+  pointer-events: auto;
+  z-index: 38;
+}
+.pr-rail.off { display: none; }
+.rail-ticks, .rail-labels, .rail-marks { position: absolute; inset: 0; }
+.rail-labels, .rail-marks { pointer-events: none; }
+
+.rail-tick {
+  position: absolute;
+  right: 0;
+  width: 7px; height: 1px;
+  background: var(--ink);
+  opacity: .26;
+  cursor: pointer;
+  transition: width .12s var(--ease), opacity .3s var(--ease), background .3s var(--ease);
+}
+.rail-tick.head { width: 11px; opacity: .34; }
+/* read: the tick recedes. The whole point is that it happens without being
+   asked for — you notice the rail has faded behind you, not that it moved. */
+.rail-tick.read { opacity: .1; }
+/* a section still folded away: half a tick, so the rail also says there is
+   more here you haven't opened */
+.rail-tick.folded { width: 4px; }
+.rail-tick.folded.head { width: 8px; }
+.rail-tick.now { width: 15px; height: 1.5px; background: var(--accent); opacity: 1; }
+.rail-tick:hover { width: 15px; opacity: .8; }
+
+.rail-label {
+  position: absolute; right: 1.15rem;
+  transform: translateY(-50%);
+  max-width: 15rem;
+  border: 0; background: none; padding: 0;
+  font-family: var(--font-label);
+  font-size: .58rem; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--ink-soft);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  text-align: right; cursor: pointer;
+  opacity: 0; transition: opacity .25s var(--ease), color .2s var(--ease);
+}
+.pr-rail:hover .rail-label { opacity: .75; pointer-events: auto; }
+.rail-label:hover { color: var(--accent-ink); opacity: 1; }
+/* the section being read names itself, so no second label rides the accent tick */
+.rail-label.now { color: var(--accent-ink); }
+.pr-rail:hover .rail-label.now { opacity: 1; }
+/* two sections a tick apart would print their names on top of each other */
+.rail-label.crowded { display: none; }
+
+/* bookmarks — a filled lozenge for one you set, hollow for "where I left off" */
+.rail-mark { position: absolute; right: 0; transform: translateY(-50%); display: flex; align-items: center; justify-content: flex-end; gap: .35rem; pointer-events: auto; }
+.rail-mark-go { width: 13px; height: 7px; border-radius: 2px; border: 1.5px solid var(--accent); background: var(--accent); padding: 0; cursor: pointer; order: 2; transition: transform .15s var(--ease); }
+.rail-mark.auto .rail-mark-go { background: var(--paper); }
+.rail-mark-go:hover { transform: scale(1.18); }
+/* The caption only comes out for the mark you are pointing at — shown for all
+   of them it printed across the section labels sitting at the same height. */
+.rail-mark-cap {
+  order: 1; max-width: 14rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
+  font-family: var(--font-label); font-size: .58rem; letter-spacing: .06em; color: var(--accent-ink);
+  background: var(--paper); padding: .1rem .3rem; border-radius: 4px;
+  opacity: 0; pointer-events: none; transition: opacity .2s var(--ease);
+}
+.rail-mark-x { order: 0; border: 0; background: none; color: var(--ink-soft); font-size: .6rem; cursor: pointer; padding: 0 .1rem; opacity: 0; transition: opacity .2s var(--ease), color .15s var(--ease); }
+.rail-mark-x:hover { color: rgb(200, 70, 70); }
+.rail-mark:hover .rail-mark-cap, .rail-mark:hover .rail-mark-x { opacity: 1; pointer-events: auto; }
+
+.rail-foot {
+  position: absolute; top: 100%; right: 0; padding-top: .5rem;
+  display: flex; flex-direction: column; align-items: flex-end; gap: .3rem;
+  opacity: 0; transition: opacity .25s var(--ease); pointer-events: none;
+}
+.pr-rail:hover .rail-foot { opacity: 1; pointer-events: auto; }
+.rail-pct { font-family: var(--font-label); font-size: .62rem; letter-spacing: .06em; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+.rail-reset { font-family: var(--font-label); font-size: .55rem; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; color: var(--ink-soft); background: transparent; border: 1px solid var(--hair); border-radius: 999px; padding: .25rem .5rem; cursor: pointer; }
+.rail-reset:hover { color: var(--ink); border-color: var(--accent-line); }
+.rail-reset.armed { color: var(--accent-ink); border-color: var(--accent-line); background: var(--accent-tint); }
+
+@media (max-width: 900px) { .pr-rail { display: none; } }
+
 /* ── pinned figures (free-floating, draggable, freely resizable) ─────────── */
 /* A full-viewport pass-through layer; each pin is a fixed card with its own
    pointer events. Pins can be dragged anywhere and resized from a margin
@@ -204,7 +292,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
 .lb-tools button:hover { background: rgba(255, 255, 255, .16); }
 
 /* ── undo toaster (sonner-inspired) ────────────────────────────────────── */
-.toaster { position: fixed; right: 1.2rem; bottom: 1.2rem; z-index: 92; display: flex; flex-direction: column; gap: .55rem; align-items: flex-end; pointer-events: none; }
+.toaster { position: fixed; right: calc(1.2rem + var(--rail-w)); bottom: 1.2rem; z-index: 92; display: flex; flex-direction: column; gap: .55rem; align-items: flex-end; pointer-events: none; }
 .sonner { pointer-events: auto; display: flex; align-items: center; gap: .9rem; min-width: 230px; max-width: 340px; background: color-mix(in srgb, var(--paper) 78%, #fff); border: 1px solid var(--hair); border-radius: 12px; box-shadow: var(--shadow); padding: .7rem .8rem .7rem .95rem; transform: translateY(14px) scale(.96); opacity: 0; transition: transform .32s var(--ease), opacity .32s var(--ease); }
 :host([data-bg="dark"]) .sonner { background: color-mix(in srgb, var(--paper) 82%, #000); }
 .sonner.show { transform: none; opacity: 1; }
@@ -244,7 +332,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
   --note-gap: clamp(.6rem, calc((100vw - var(--measure)) / 2 - 240px), 2.2rem);
   position: fixed; top: 4.6rem; bottom: 1rem;
   left: calc(50% + var(--measure) / 2 + var(--note-gap));
-  right: 1rem;             /* fill the rest of the margin… */
+  right: calc(1rem + var(--rail-w));   /* fill the rest of the margin, minus the rail… */
   max-width: 280px;        /* …but never wider than a comfortable note */
   pointer-events: none;
   overflow: hidden;        /* notes scroll out with their marks, not onto the topbar */

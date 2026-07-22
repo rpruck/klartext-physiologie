@@ -39,6 +39,7 @@
     proseFont: 'eb', labelFont: 'inter-label', noteFont: 'inter', fs: 19, lh: 1.68,
     measure: 680, gap: 1.0, align: 'justify', accent: '#0e8373',
     bg: 'neutral', hidedeco: true, frame: 'hairline', motion: true, progress: true,
+    collapse: true, rail: true,
   };
   const PAPER = { neutral: '#fbfbfb', paper: '#faf8f3', white: '#ffffff', sepia: '#f3ead6', dark: '#17140f' };
 
@@ -78,6 +79,8 @@
     d.dataset.motion = S.motion ? '1' : '0';
     d.dataset.align = S.align;
     d.dataset.progress = S.progress ? '1' : '0';   // content.css gates .pr-seen on this
+    d.dataset.collapse = S.collapse ? '1' : '0';   // …and the accordion chrome on this
+    d.dataset.rail = S.rail ? '1' : '0';
     if (PR.ui && PR.ui.host) PR.ui.host.dataset.bg = S.bg; // let shadow CSS theme
 
     // reflect into shadow controls (if the UI is mounted)
@@ -93,6 +96,7 @@
       setSeg('#alignSeg', S.align); setSeg('#bgSeg', S.bg); setSeg('#frameSeg', S.frame);
       setToggle('#hidedeco', S.hidedeco); setToggle('#motion', S.motion);
       setToggle('#progress', S.progress);
+      setToggle('#collapse', S.collapse); setToggle('#rail', S.rail);
       markSwatch();
     }
     PR.tools && PR.tools.layoutNotes && PR.tools.layoutNotes();
@@ -122,7 +126,14 @@
     $('#hidedeco').onclick = () => { S.hidedeco = !S.hidedeco; save(); apply(); };
     $('#motion').onclick = () => { S.motion = !S.motion; save(); apply(); };
     $('#progress').onclick = () => { S.progress = !S.progress; save(); apply(); retag(); };
-    $('#resetBtn').onclick = () => { S = { ...DEFAULTS }; save(); apply(); retag(); };
+    // Turning the accordion off must show the whole page at once; turning it
+    // back on folds everything away again, which is what asking for it means.
+    $('#collapse').onclick = () => {
+      S.collapse = !S.collapse; save(); apply();
+      PR.outline && PR.outline.openAll(!S.collapse);
+    };
+    $('#rail').onclick = () => { S.rail = !S.rail; save(); apply(); PR.progress && PR.progress.setVisible(S.rail); };
+    $('#resetBtn').onclick = () => { S = { ...DEFAULTS }; save(); apply(); retag(); PR.progress && PR.progress.setVisible(S.rail); };
     wireForget();
   }
 

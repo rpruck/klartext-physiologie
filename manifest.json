@@ -29,6 +29,8 @@
         "src/reskin.js",
         "src/ui.js",
         "src/tools.js",
+        "src/outline.js",
+        "src/progress.js",
         "src/settings.js",
         "src/activate.js",
         "src/content.js"

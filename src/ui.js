@@ -18,8 +18,23 @@
   const TOPBAR = `
     <div id="pr-topbar" part="topbar">
       <button class="tb-btn" id="notesToggle" hidden>Notizen</button>
+      <button class="tb-btn" id="bookmarkBtn" hidden title="Hier weiterlesen">⌑ Lesezeichen</button>
       <button class="tb-btn" id="openPanel">✦ Einstellungen</button>
     </div>`;
+
+  /* The reading rail: a ruler of the page's sections down the right edge.
+     progress.js fills #railTicks / #railLabels / #railMarks; everything here is
+     the frame it hangs in. */
+  const RAIL = `
+    <aside class="pr-rail" id="pr-rail" aria-label="Lesefortschritt">
+      <div class="rail-ticks" id="railTicks"></div>
+      <div class="rail-labels" id="railLabels"></div>
+      <div class="rail-marks" id="railMarks"></div>
+      <div class="rail-foot">
+        <span class="rail-pct" id="railPct">0 %</span>
+        <button class="rail-reset" id="railReset" data-label="↺ Zurücksetzen">↺ Zurücksetzen</button>
+      </div>
+    </aside>`;
 
   // Left pin rail (figures docked to the margin) + lightbox + undo toaster.
   const PINRAIL = `<aside class="pr-pin-rail empty" id="pinRail" aria-label="Angeheftete Abbildungen"></aside>`;
@@ -162,7 +177,15 @@
           </div>
         </div>
         <div class="group">
-          <span class="g-label">Lesefortschritt</span>
+          <span class="g-label">Lesen</span>
+          <div class="field toggle">
+            <label for="collapse">Abschnitte einklappen</label>
+            <button class="sw-toggle" id="collapse" aria-pressed="true"></button>
+          </div>
+          <div class="field toggle">
+            <label for="rail">Fortschrittsleiste</label>
+            <button class="sw-toggle" id="rail" aria-pressed="true"></button>
+          </div>
           <div class="field toggle">
             <label for="progress">Gelesenes markieren</label>
             <button class="sw-toggle" id="progress" aria-pressed="true"></button>
@@ -209,7 +232,7 @@
     root.className = 'pr-ui-root';
     // one-time activation overlay (played once per session by activate.js)
     const ACTIVATE = `<div class="activate" id="activate"></div><div class="activate-line" id="activateLine"></div>`;
-    root.innerHTML = TOPBAR + PINRAIL + NOTEGUTTER + LIGHTBOX + HLPOP + PANEL + TOASTER + ACTIVATE;
+    root.innerHTML = TOPBAR + RAIL + PINRAIL + NOTEGUTTER + LIGHTBOX + HLPOP + PANEL + TOASTER + ACTIVATE;
     shadow.appendChild(root);
     PR.ui.root = root;
 
