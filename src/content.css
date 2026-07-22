@@ -62,7 +62,31 @@ html.pr-on body {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
+html.pr-on[data-motion="0"] #pr-reader,
 html.pr-on[data-motion="0"] #pr-reader * { animation: none !important; transition: none !important; }
+
+/* ── side lanes ────────────────────────────────────────────────────────────
+   Three lanes: pinned figures live in the left margin, the column in the
+   middle, margin notes off its right edge. Collapsing one lane slides the
+   column that way, so the surviving margin gets the whole spare width — which
+   is also how figures and notes end up on the same side.
+
+   The column keeps `margin: 0 auto` and moves with `left` (it is already
+   position:relative): the width never changes, and every geometry consumer
+   (highlight rects, layoutNotes, block measurement) asks
+   getBoundingClientRect(), which counts the offset. ui.css reads --lane-shift
+   too — custom properties inherit into the shadow host. */
+html.pr-on {
+  --lane-edge: 4rem;                 /* clearance kept on the side moved toward
+                                        — enough for the reading rail's lane */
+  /* …measured against the column's border box, hence the 1.4rem: that is the
+     side padding in #pr-reader below, and without it the near edge ends up
+     tighter than the far one. */
+  --lane-room: max(0px, (100vw - var(--measure)) / 2 - 1.4rem - var(--lane-edge));
+  --lane-shift: 0px;
+}
+html.pr-on[data-lane-notes="0"][data-lane-img="1"] { --lane-shift: var(--lane-room); }
+html.pr-on[data-lane-img="0"][data-lane-notes="1"] { --lane-shift: calc(-1 * var(--lane-room)); }
 
 /* ── reader column ─────────────────────────────────────────────────────── */
 html.pr-on #pr-reader {
@@ -70,6 +94,8 @@ html.pr-on #pr-reader {
   margin: 0 auto;
   padding: clamp(2rem, 6vh, 4rem) 1.4rem 24vh;
   position: relative;
+  left: var(--lane-shift);
+  transition: left .35s var(--ease);
   font-family: var(--font-prose);
   font-size: var(--fs);
   line-height: var(--lh);

@@ -61,6 +61,35 @@
 .tb-btn.active { color: var(--accent-ink); border-color: var(--accent-line); background: var(--accent-tint); }
 .tb-btn[hidden] { display: none; }
 
+/* An icon button is the same pill, squared off around a single glyph. */
+.tb-icon {
+  font-family: inherit;
+  font-size: .95rem;
+  letter-spacing: 0;
+  line-height: 1;
+  padding: .38rem .5rem;
+  justify-content: center;
+  min-width: 2rem;
+}
+/* …and says what it does on hover, since the glyph alone can't. The bubble
+   hangs below the bar (the buttons sit at the top edge) and waits a beat, so
+   sweeping past the cluster doesn't strobe three of them. */
+.tb-btn[data-tip] { position: relative; }
+.tb-btn[data-tip]::after {
+  content: attr(data-tip);
+  position: absolute; top: calc(100% + .45rem); right: 0;
+  font-family: var(--font-label); font-size: .62rem; letter-spacing: .04em;
+  text-transform: none; white-space: nowrap; color: var(--ink);
+  background: color-mix(in srgb, var(--paper) 92%, transparent);
+  backdrop-filter: saturate(1.1) blur(8px);
+  border: 1px solid var(--hair); border-radius: 7px; box-shadow: var(--shadow);
+  padding: .3rem .5rem;
+  opacity: 0; transform: translateY(-3px); pointer-events: none;
+  transition: opacity .16s var(--ease), transform .16s var(--ease);
+}
+.tb-btn[data-tip]:hover::after,
+.tb-btn[data-tip]:focus-visible::after { opacity: 1; transform: none; transition-delay: .35s; }
+
 /* ── backdrop ──────────────────────────────────────────────────────────── */
 .backdrop {
   position: fixed; inset: 0; z-index: 60;
@@ -258,6 +287,9 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
 
 .pin {
   position: fixed; pointer-events: auto; z-index: 40;
+  /* a <figure>: the UA's `margin: 1em 40px` would offset every pin from the
+     coordinates we store for it — which the peek strip measures against. */
+  margin: 0;
   display: flex; flex-direction: column;
   max-height: calc(100dvh - 12px);
   border: 1px solid var(--hair); border-radius: 10px; overflow: hidden;
@@ -269,6 +301,10 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
 @keyframes pinIn { from { opacity: 0; transform: scale(.97) translateY(-6px); } to { opacity: 1; transform: none; } }
 .pin.flash { animation: pinFlash .9s var(--ease); }
 @keyframes pinFlash { 0%, 100% { box-shadow: var(--shadow); } 35% { box-shadow: 0 0 0 3px var(--accent-line), var(--shadow); } }
+/* Parked past an edge with only its grab strip showing: dimmed, so it reads as
+   put away rather than half-broken. Reaching for it brings it back to full. */
+.pin.offscreen { opacity: .6; transition: opacity .2s var(--ease); }
+.pin.offscreen:hover, .pin.offscreen.grabbing { opacity: 1; }
 .pin.resizing { user-select: none; }
 
 .pin-bar {
@@ -360,12 +396,20 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
      but a wide column on a narrow window spends it on note width instead. */
   --note-gap: clamp(.6rem, calc((100vw - var(--measure)) / 2 - 240px), 2.2rem);
   position: fixed; top: 4.6rem; bottom: 1rem;
-  left: calc(50% + var(--measure) / 2 + var(--note-gap));
+  /* --lane-shift inherits from html.pr-on: the gutter travels with the column
+     when a lane is collapsed, instead of staying behind on the text. */
+  left: calc(50% + var(--measure) / 2 + var(--note-gap) + var(--lane-shift, 0px));
   right: calc(1rem + var(--rail-w));   /* fill the rest of the margin, minus the rail… */
   max-width: 280px;        /* …but never wider than a comfortable note */
   pointer-events: none;
   overflow: hidden;        /* notes scroll out with their marks, not onto the topbar */
+  transition: left .35s var(--ease);
 }
+/* Notes lane collapsed: the cards go away (the marks stay, and turning the lane
+   back on brings every note back). Image lane collapsed: the column has moved
+   left, so spend the room it freed on wider notes, not just more air. */
+:host([data-lane-notes="0"]) .pr-note-gutter { display: none; }
+:host([data-lane-img="0"]) .pr-note-gutter { max-width: 380px; }
 .note {
   position: absolute; left: 0; right: 0; width: auto; pointer-events: auto;
   background: color-mix(in srgb, var(--accent) 4%, var(--paper));

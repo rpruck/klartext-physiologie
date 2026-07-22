@@ -126,28 +126,64 @@
   // fine labels while scrolling the prose. Position + width persist per page.
   const PIN_MIN = 150;
   const pinMax = () => Math.min(1200, Math.round(window.innerWidth * 0.96));
+  // What must stay on screen when a pin is shoved past an edge: the grip plus a
+  // sliver of the bar. A figure can be parked almost entirely outside the
+  // window — but never so far that there is nothing left to grab it by.
+  const PEEK = 44;
+  // clientWidth, not innerWidth: the scrollbar is not a place you can grab a
+  // pin by, so a strip parked under it is not a strip.
+  const vw = () => document.documentElement.clientWidth || window.innerWidth;
 
-  // New pins land in the left margin, right-aligned to the text column, and are
-  // as wide as the margin comfortably allows (never the old cramped 260px cap).
-  function defaultPin() {
+  // The margins the text column is not using — measured, not derived, because
+  // a collapsed lane slides the column sideways (content.css --lane-shift) and
+  // the arithmetic would still insist it is centred.
+  function margins() {
+    const reader = document.getElementById('pr-reader');
+    if (reader) {
+      const r = reader.getBoundingClientRect();
+      return { left: Math.max(0, r.left), right: Math.max(0, vw() - r.right), edge: r.right };
+    }
     const measure = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--measure')) || 680;
-    const margin = Math.max(0, (window.innerWidth - measure) / 2);
-    const w = Math.round(Math.max(240, Math.min(400, margin - 24)));
-    const left = margin > w + 28 ? Math.round(margin - w - 20) : 16;
+    const m = Math.max(0, (vw() - measure) / 2);
+    return { left: m, right: m, edge: vw() - m };
+  }
+
+  // Park a pin of width w against the text column in the roomier margin — the
+  // side you just cleared is the side you cleared it for.
+  function parkX(w) {
+    const m = margins();
+    return m.left >= m.right
+      ? Math.max(16, Math.round(m.left - w - 20))
+      : Math.min(vw() - w - 16, Math.round(m.edge + 20));
+  }
+
+  // New pins land beside the text column, as wide as that margin comfortably
+  // allows (never the old cramped 260px cap).
+  function defaultPin() {
+    const m = margins();
+    const w = Math.round(Math.max(240, Math.min(400, Math.max(m.left, m.right) - 24)));
     const top = 84 + (PINS.length * 26) % 260;
-    return { x: left, y: top, w: Math.max(PIN_MIN, w) };
+    return { x: parkX(w), y: top, w: Math.max(PIN_MIN, w) };
   }
 
   const pinEl = (src) => qa('.pin').find((el) => decodeURIComponent(el.dataset.key) === src);
 
-  // Keep a pin's stored geometry inside the viewport (e.g. after a resize or a
-  // reload at a different window size) so it never comes back off-screen.
+  // One rule for where a pin may sit, shared by the drag and by every re-render
+  // — they used to disagree, so a pin parked half off the right edge was hauled
+  // back the next time the window resized. x may run negative down to the peek
+  // strip; y stays put, since there is no reason to stash a figure upward.
+  const clampXY = (x, y, w) => ({
+    x: Math.max(PEEK - w, Math.min(vw() - PEEK, x == null ? 16 : x)),
+    y: Math.max(4, Math.min(window.innerHeight - 48, y == null ? 84 : y)),
+  });
+
   function clampGeom(p) {
     const w = Math.max(PIN_MIN, Math.min(pinMax(), p.w || 300));
-    const x = Math.max(4, Math.min(window.innerWidth - w - 4, p.x == null ? 16 : p.x));
-    const y = Math.max(4, Math.min(window.innerHeight - 48, p.y == null ? 84 : p.y));
-    return { w, x, y };
+    return Object.assign({ w }, clampXY(p.x, p.y, w));
   }
+
+  // Parked past an edge → dimmed (ui.css), so it reads as put away.
+  const markOffscreen = (el, p) => el.classList.toggle('offscreen', p.x < 0 || p.x + p.w > vw());
 
   function pinFigure(fig) {
     const existing = pinEl(fig.src);
@@ -159,14 +195,26 @@
     persist(); renderPins();
   }
 
+  // Let go of every figure at once. Undo-only, like the single ✕ — nothing is
+  // lost that a click can't put back.
+  function unpinAll() {
+    if (!PINS.length) return;
+    const all = PINS.slice();
+    PINS.splice(0);            // splice, not reassign: PAGE.pins is shared
+    persist(); renderPins();
+    showToast(all.length === 1 ? 'Abbildung gelöst' : `${all.length} Abbildungen gelöst`,
+      { actionLabel: 'Rückgängig', onAction: () => { PINS.push(...all); persist(); renderPins(); } });
+  }
+
   function renderPins() {
     const rail = q('#pinRail'); if (!rail) return;
     rail.classList.toggle('empty', PINS.length === 0);
+    const all = q('#unpinAll'); if (all) all.hidden = PINS.length === 0;
     rail.innerHTML = PINS.map((p, i) => {
       const g = clampGeom(p); p.x = g.x; p.y = g.y; p.w = g.w; // normalise stored geom
       return `<figure class="pin${p.collapsed ? ' collapsed' : ''}" data-key="${encodeURIComponent(p.src)}" style="left:${g.x}px;top:${g.y}px;width:${g.w}px">` +
         `<div class="pin-bar">` +
-          `<span class="pin-grip" title="Ziehen zum Verschieben">⠿</span>` +
+          `<span class="pin-grip" title="Ziehen zum Verschieben · Doppelklick: zurück an den Rand">⠿</span>` +
           `<span class="pin-cap"></span>` +
           `<button class="pin-btn pin-zoom" data-i="${i}" data-dir="-1" title="Kleiner">−</button>` +
           `<button class="pin-btn pin-zoom" data-i="${i}" data-dir="1" title="Größer">+</button>` +
@@ -186,7 +234,7 @@
       const i = +x.dataset.i; const [removed] = PINS.splice(i, 1); persist(); renderPins();
       showToast('Abbildung gelöst', { actionLabel: 'Rückgängig', onAction: () => { PINS.splice(Math.min(i, PINS.length), 0, removed); persist(); renderPins(); } });
     });
-    qa('.pin').forEach((el, i) => wirePin(el, i));
+    qa('.pin').forEach((el, i) => { markOffscreen(el, PINS[i]); wirePin(el, i); });
   }
 
   // +/- buttons: quick width steps (free drag-resize lives on the corner handle).
@@ -211,14 +259,26 @@
       el.classList.add('grabbing');
       try { bar.setPointerCapture(e.pointerId); } catch (_) {}
       const move = (ev) => {
-        p.x = Math.max(4, Math.min(window.innerWidth - 40, px + (ev.clientX - x0)));
-        p.y = Math.max(4, Math.min(window.innerHeight - 40, py + (ev.clientY - y0)));
+        const c = clampXY(px + (ev.clientX - x0), py + (ev.clientY - y0), g.w);
+        p.x = c.x; p.y = c.y;
         el.style.left = p.x + 'px'; el.style.top = p.y + 'px';
+        markOffscreen(el, p);
       };
       const up = (ev) => { bar.removeEventListener('pointermove', move); el.classList.remove('grabbing'); try { bar.releasePointerCapture(ev.pointerId); } catch (_) {} persist(); };
       bar.addEventListener('pointermove', move);
       bar.addEventListener('pointerup', up, { once: true });
       bar.addEventListener('pointercancel', up, { once: true });
+    });
+
+    // Double-click the bar to bring a stashed pin home — the way back from the
+    // edge, without hunting for the strip you left showing.
+    bar.addEventListener('dblclick', (e) => {
+      if (e.target.closest('.pin-btn')) return;
+      const g = clampGeom(p);
+      // horizontally only: you asked for it back, not for it to move up the page
+      p.x = clampXY(parkX(g.w), p.y, g.w).x;
+      el.style.left = p.x + 'px';
+      markOffscreen(el, p); persist();
     });
 
     // drag the corner handle to resize width freely; height follows the image
@@ -242,6 +302,7 @@
       const p = PINS[i]; if (!p) return;
       const g = clampGeom(p); p.x = g.x; p.y = g.y; p.w = g.w;
       el.style.left = g.x + 'px'; el.style.top = g.y + 'px'; el.style.width = g.w + 'px';
+      markOffscreen(el, p);
     });
   }
 
@@ -382,6 +443,10 @@
   let notesRaf = 0;
   function layoutNotes() {
     const gutter = q('#noteGutter'); if (!gutter) return;
+    // Note lane collapsed: the gutter is display:none, so its rect is all
+    // zeros and every note would be laid out against nothing. Nothing to do —
+    // and this runs on every scroll frame, so it must bail cheaply.
+    if (document.documentElement.dataset.laneNotes === '0') return;
     /* null = none, '' = empty-but-open. A mark folded away inside a collapsed
        section has no box to align to, so its note leaves the gutter entirely
        rather than sitting on at its last position, orphaned from its text.
@@ -504,6 +569,7 @@
       reader.addEventListener('dblclick', (e) => { const m = e.target.closest('mark.hl.has-note'); if (m) focusNote(m.dataset.hid); });
       wireTips(reader);
     }
+    const unpin = q('#unpinAll'); if (unpin) unpin.onclick = unpinAll;
     // popover: choose a colour / add note
     qa('#hlPop .sw').forEach((sw) => sw.onclick = () => { if (pending) commitHighlight(sw.dataset.color); hidePop(); window.getSelection().removeAllRanges(); });
     const act = q('#hlPop .act[data-act="note"]');
@@ -528,7 +594,7 @@
 
   PR.tools = {
     init, restore, restoreHighlights, showToast, openLightbox, closeLightbox,
-    pinFigure, renderPins, persist, layoutNotes,
+    pinFigure, renderPins, unpinAll, persist, layoutNotes,
     get page() { return PAGE; },
   };
 })();

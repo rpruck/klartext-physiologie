@@ -39,7 +39,7 @@
     proseFont: 'eb', labelFont: 'inter-label', noteFont: 'inter', fs: 19, lh: 1.68,
     measure: 680, gap: 1.0, align: 'justify', accent: '#0e8373',
     bg: 'neutral', hidedeco: true, frame: 'hairline', motion: true, progress: true,
-    collapse: true, rail: true,
+    collapse: true, rail: true, laneImg: true, laneNotes: true,
   };
   const PAPER = { neutral: '#fbfbfb', paper: '#faf8f3', white: '#ffffff', sepia: '#f3ead6', dark: '#17140f' };
 
@@ -59,6 +59,8 @@
   const $$ = (sel) => (PR.ui && PR.ui.shadow) ? [...PR.ui.shadow.querySelectorAll(sel)] : [];
   const setSeg = (sel, v) => $$(sel + ' button').forEach((b) => b.setAttribute('aria-pressed', b.dataset.v === v));
   const setToggle = (sel, v) => { const el = $(sel); if (el) el.setAttribute('aria-pressed', !!v); };
+  // A lane button is a topbar pill, so it carries .active as well as the state.
+  const setLane = (sel, v) => { const el = $(sel); if (el) { el.setAttribute('aria-pressed', !!v); el.classList.toggle('active', !!v); } };
   const markSwatch = () => $$('#swatches .cs').forEach((c) => c.classList.toggle('sel', c.dataset.c.toLowerCase() === String(S.accent).toLowerCase()));
 
   function apply() {
@@ -81,7 +83,14 @@
     d.dataset.progress = S.progress ? '1' : '0';   // content.css gates .pr-seen on this
     d.dataset.collapse = S.collapse ? '1' : '0';   // …and the accordion chrome on this
     d.dataset.rail = S.rail ? '1' : '0';
-    if (PR.ui && PR.ui.host) PR.ui.host.dataset.bg = S.bg; // let shadow CSS theme
+    d.dataset.laneImg = S.laneImg ? '1' : '0';       // content.css derives --lane-shift
+    d.dataset.laneNotes = S.laneNotes ? '1' : '0';
+    if (PR.ui && PR.ui.host) {
+      PR.ui.host.dataset.bg = S.bg;                  // let shadow CSS theme…
+      // …and reach the lane state: shadow rules can't select <html>'s attrs.
+      PR.ui.host.dataset.laneImg = d.dataset.laneImg;
+      PR.ui.host.dataset.laneNotes = d.dataset.laneNotes;
+    }
 
     // reflect into shadow controls (if the UI is mounted)
     if ($('#proseFont')) {
@@ -99,6 +108,7 @@
       setToggle('#collapse', S.collapse); setToggle('#rail', S.rail);
       markSwatch();
     }
+    setLane('#laneImg', S.laneImg); setLane('#laneNotes', S.laneNotes);
     PR.tools && PR.tools.layoutNotes && PR.tools.layoutNotes();
   }
 
@@ -133,6 +143,10 @@
       PR.outline && PR.outline.openAll(!S.collapse);
     };
     $('#rail').onclick = () => { S.rail = !S.rail; save(); apply(); PR.progress && PR.progress.setVisible(S.rail); };
+    // Lane toggles (topbar, not the panel — you reach for them while arranging
+    // figures). Pins stay where they were dragged; only the column moves.
+    $('#laneImg').onclick = () => { S.laneImg = !S.laneImg; save(); apply(); };
+    $('#laneNotes').onclick = () => { S.laneNotes = !S.laneNotes; save(); apply(); };
     $('#resetBtn').onclick = () => { S = { ...DEFAULTS }; save(); apply(); retag(); PR.progress && PR.progress.setVisible(S.rail); };
     wireForget();
   }

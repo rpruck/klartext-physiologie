@@ -15,9 +15,13 @@
   const PR = (window.__physioReskin ||= {});
   let host = null, shadow = null;
 
+  /* The icon buttons say what they do on hover (data-tip), not in the bar —
+     three words of German each would crowd out the two labelled controls. */
   const TOPBAR = `
     <div id="pr-topbar" part="topbar">
-      <button class="tb-btn" id="notesToggle" hidden>Notizen</button>
+      <button class="tb-btn tb-icon" id="unpinAll" hidden data-tip="Alle Abbildungen lösen" aria-label="Alle Abbildungen lösen">⊘</button>
+      <button class="tb-btn tb-icon" id="laneImg" data-tip="Bildspalte" aria-label="Bildspalte" aria-pressed="true">◧</button>
+      <button class="tb-btn tb-icon" id="laneNotes" data-tip="Notizspalte" aria-label="Notizspalte" aria-pressed="true">◨</button>
       <button class="tb-btn" id="bookmarkBtn" hidden title="Hier weiterlesen">⌑ Lesezeichen</button>
       <button class="tb-btn" id="openPanel">✦ Einstellungen</button>
     </div>`;

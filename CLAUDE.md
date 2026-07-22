@@ -178,6 +178,26 @@ Key files:
 | `src/fonts.js` | Registers the bundled woff2 faces from `fonts/` |
 | `popup.html` / `src/popup.js` | Toolbar on/off switch |
 
+### The three lanes (figures · text · notes)
+
+Pinned figures float in the left margin, the column sits in the middle, margin notes hang off its
+right edge. Two topbar icon toggles (`laneImg`/`laneNotes`, persisted settings, mirrored to
+`<html>` **and** the shadow host as `data-lane-img`/`data-lane-notes`) collapse either side lane:
+`content.css` derives **`--lane-shift`** from the pair and slides the column with `left` — it keeps
+`margin: 0 auto`, so its width never changes and every geometry consumer keeps reading
+`getBoundingClientRect()`. The surviving margin gets the whole spare width; collapsing the *image*
+lane is also how figures and notes end up on the same side. `ui.css` reads the same variable across
+the shadow boundary (the note gutter travels with the column, widens when the image lane is off, and
+is `display:none` when its own lane is — which `layoutNotes()` also early-returns on).
+
+A pin may be pushed **past** an edge: `clampXY` in `tools.js` is the one rule the drag and every
+re-render share (they used to disagree, so a parked pin was hauled back on the next resize), and it
+allows any position that leaves `PEEK` (44px) of the card on screen — measured against
+`clientWidth`, since a strip under the scrollbar is not a strip. Such a pin gets `.offscreen`
+(dimmed); double-clicking its bar parks it back beside the column, in whichever margin is currently
+the roomier one (`parkX`, which `defaultPin` uses too — with a lane collapsed the two margins are
+wildly lopsided).
+
 ### Theming / dark mode
 
 `content.css` defines design tokens on `html.pr-on`, with per-background overrides keyed on
