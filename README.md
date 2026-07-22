@@ -68,9 +68,10 @@ motion that stays quiet.
   section. The ticks behind you fade as you read, so the page quietly shows how far you have got —
   on the rail and as a small meter under each collapsed section title. Hover it for the section
   names, the percentage and a reset; click a tick to travel there.
-- **Bookmarks.** The rail keeps one automatic mark at the spot you last left off, so skimming ahead
-  never loses it, and **⌑ Lesezeichen** drops as many of your own as you like. Click a mark to jump
-  back, hover it for the ✕ — with an undo toast, like everything else here.
+- **Bookmarks.** The rail keeps one automatic mark at the furthest point you have read, so neither
+  skimming ahead nor scrolling back to re-read a sentence can lose it — it only ever moves forward.
+  **⌑ Lesezeichen** drops as many of your own as you like. Click a mark to jump back, hover it for
+  the ✕ — with an undo toast, like everything else here.
 - The image-only landing page gets its own hero; in-page anchors (`#Z_Golgiapparat` and friends)
   keep resolving.
 

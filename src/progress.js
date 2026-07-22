@@ -235,10 +235,23 @@
     el.scrollIntoView({ block: 'center', behavior: 'smooth' });
   }
   // The automatic one: where the reading line stood when the page was left.
+  /* Where a mark stands in the page, as one comparable number: which segment,
+     and how far through it. The preamble is segment -1, so it ranks below
+     everything. */
+  const rankOf = (m) => {
+    const si = SEGS.findIndex((s) => s.id === m.sec);
+    return si + 1 + Math.min(0.999, Math.max(0, m.f || 0));
+  };
   function rememberSpot() {
     const el = blockOnLine();
     if (!el) return;
-    rec().auto = describe(el);
+    const next = describe(el);
+    /* A high-water mark, like the read fractions: scrolling back to re-read a
+       sentence is re-reading, not un-reading, and the whole point of the mark
+       is to hold the place you got to while you do it. It only ever moves
+       forward — the rail's reset is what puts it back. */
+    if (rec().auto && rankOf(rec().auto) >= rankOf(next)) return;
+    rec().auto = next;
     PR.page && PR.page.save();
     paintMarks();
   }

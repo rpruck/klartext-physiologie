@@ -115,7 +115,10 @@ accordion and `src/progress.js` draws a ruler of it down the right edge.
 - **`progress.js`** — ticks are shared between sections by *text weight*, not pixels, so folding
   a section doesn't make the rail jump. Read state is a high-water fraction per section; read
   ticks fade. One automatic "zuletzt gelesen" mark plus any number of manual bookmarks, anchored
-  by the `.pr-block` content hash like annotations are.
+  by the `.pr-block` content hash like annotations are. The automatic one is a high-water mark
+  too (`rankOf` orders marks by segment + fraction): scrolling back to re-read a sentence is
+  re-reading, not un-reading, and holding the place you got to while you do it is the whole job.
+  Only the rail's reset moves it back.
 
 Two traps this cost real time on, both from `content-visibility: hidden`:
 
