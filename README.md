@@ -90,6 +90,11 @@ motion that stays quiet.
   into a free-floating card you can drag anywhere and resize from the corner, so fine labels stay
   readable while you scroll on. Position, size and collapsed state persist per page.
 - **Undo** — removing a highlight or note, or unpinning a figure, raises a toast with **Rückgängig**.
+- **⟨/⟩ Original ansehen** — for when you want to know what the page actually said. Arm it, point at
+  any paragraph, table or figure, and click: the untouched original opens in a window already
+  scrolled to the markup that produced it, with that markup marked. The window can be dragged and
+  resized, and stays live while you keep picking — shrink it to one half and you can walk down the
+  column comparing the two. A hint in the opposite corner names your system's screenshot shortcuts.
 - **Turn-on animation** — the page is drawn in top→bottom behind a sweeping accent line. It plays
   **once per browser session**; there is no replay control, and it respects both the motion setting
   and `prefers-reduced-motion`.
@@ -140,6 +145,8 @@ src/
   tools.js             lightbox · pins · highlights · notes · toasts
   outline.js           the page's sections, read off the author's strip; the accordion
   progress.js          the reading rail: read-state per section · bookmarks · reset
+  bookmarks.js         every bookmark in the book, in one drawer
+  inspect.js           the original beside the reskin: pick a block, read its markup
   settings.js          the ✦ Einstellungen panel; writes CSS vars on :root
   activate.js          the once-per-session turn-on animation
   content.js           document_end orchestrator

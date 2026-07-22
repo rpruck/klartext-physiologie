@@ -816,3 +816,13 @@ html.pr-on #pr-reader a.pr-author .pr-author-cap {
 }
 html.pr-on #pr-reader a.pr-author:hover img { transform: translateY(-2px); box-shadow: var(--shadow); }
 html.pr-on #pr-reader a.pr-author:hover .pr-author-cap { color: var(--accent-ink); }
+
+/* ── inspect mode (inspect.js) ──────────────────────────────────────────
+   While the picker is armed a click picks a block and nothing else: the
+   crosshair says so, and suppressing selection also keeps tools.js's highlight
+   popover from firing on a drag that was only meant to point at something. */
+html.pr-inspect #pr-reader {
+  cursor: crosshair;
+  user-select: none;
+}
+html.pr-inspect #pr-reader a { cursor: crosshair; }

@@ -32,6 +32,25 @@
   const base = (s) => (s || '').split('/').pop().split('?')[0].split('#')[0];
   const norm = (s) => (s || '').replace(/\s+/g, ' ').trim();
 
+  /* ── provenance ─────────────────────────────────────────────────────────
+     This pipeline is lossy by design and then mountReader() wipes the body, so
+     nothing rendered can say where it came from — which is exactly the question
+     every heuristic in here was tuned by answering. ord() stamps a source
+     element with a serial number the first time the walk consults it; the
+     number rides the token → line → block → rendered element, and mountReader
+     serialises the stamped markup before it wipes. inspect.js reads a rendered
+     block's data-pr-o and finds [data-pr-o] in that snapshot.
+     Lazy on purpose: only elements the pipeline actually looked at are marked,
+     so the snapshot stays close to what the server sent. */
+  let seq = 0;
+  function ord(el) {
+    if (!el || el.nodeType !== 1) return null;
+    if (el.dataset.prO === undefined) el.dataset.prO = ++seq;
+    return +el.dataset.prO;
+  }
+  const stamp = (el, o) => { if (el && o != null) el.dataset.prO = o; return el; };
+  const firstO = (runs) => { for (const r of (runs || [])) if (r.o != null) return r.o; return null; };
+
   /* ── image taxonomy ─────────────────────────────────────────────────── */
   const NAV_LABEL = {
     // man_KapUe points at Pruef.htm — the book's index, not the chapter's; the
@@ -329,7 +348,9 @@
       for (const n of node.childNodes) {
         if (n.nodeType === 3) {
           const t = n.textContent;
-          if (t && t.trim()) toks.push({ k: 'text', text: t.replace(/\s+/g, ' '), st });
+          // `node` is this text node's parent element — the finest source
+          // granularity there is, and it costs nothing to record it here.
+          if (t && t.trim()) toks.push({ k: 'text', text: t.replace(/\s+/g, ' '), st, o: ord(node) });
           else if (t && /\s/.test(t) && toks.length && toks[toks.length - 1].k === 'text') toks.push({ k: 'text', text: ' ', st });
           continue;
         }
@@ -338,7 +359,7 @@
         if (SKIP.has(tag)) continue;
 
         const anchorId = n.id || (tag === 'A' ? n.getAttribute('name') : null);
-        if (anchorId) toks.push({ k: 'anchor', id: anchorId });
+        if (anchorId) toks.push({ k: 'anchor', id: anchorId, o: ord(n) });
 
         if (tag === 'BR') { toks.push({ k: 'br' }); continue; }
         if (tag === 'HR') { toks.push({ k: 'hr' }); continue; }
@@ -351,7 +372,7 @@
             if (last && last.k === 'nav' && last.href === cn.href) {
               if (cn.dir && !last.dir) { last.dir = cn.dir; last.label = chapterLabel(cn.num, cn.dir); }
             } else {
-              toks.push({ k: 'nav', href: cn.href, label: chapterLabel(cn.num, cn.dir), dir: cn.dir });
+              toks.push({ k: 'nav', href: cn.href, label: chapterLabel(cn.num, cn.dir), dir: cn.dir, o: ord(n) });
             }
             continue; // never walk in — the numeral and the arrow are the pill
           }
@@ -361,19 +382,19 @@
           const lab = labelOf(f);
           // 'wrap' labels are consumed by their container below; the picture
           // itself has nothing left to say once the word is out.
-          if (lab && lab.kind !== 'wrap') { toks.push({ k: 'label', text: lab.text, banner: lab.kind === 'banner' }); continue; }
-          if (f === GLOSS_BADGE) { toks.push({ k: 'gloss' }); continue; }
+          if (lab && lab.kind !== 'wrap') { toks.push({ k: 'label', text: lab.text, banner: lab.kind === 'banner', o: ord(n) }); continue; }
+          if (f === GLOSS_BADGE) { toks.push({ k: 'gloss', o: ord(n) }); continue; }
           if (f === SPINE_SEP) { toks.push({ k: 'sep' }); continue; }
           const c = classifyImg(n, counts);
-          if (c.kind === 'fig') toks.push({ k: 'fig', ...c });
-          else if (c.kind === 'nav') toks.push({ k: 'nav', href: c.href, label: c.label });
-          else if (c.kind === 'deco' && atLineStart() && isBulletSize(...imgSize(n))) toks.push({ k: 'bullet', src: f });
+          if (c.kind === 'fig') toks.push({ k: 'fig', ...c, o: ord(n) });
+          else if (c.kind === 'nav') toks.push({ k: 'nav', href: c.href, label: c.label, o: ord(n) });
+          else if (c.kind === 'deco' && atLineStart() && isBulletSize(...imgSize(n))) toks.push({ k: 'bullet', src: f, o: ord(n) });
           continue;
         }
         if (tag === 'TABLE') {
           const kind = classifyTable(n);
           if (kind === 'layout') { toks.push({ k: 'block' }); walk(n, st); toks.push({ k: 'block' }); }
-          else toks.push({ k: 'table', kind, el: n, st });
+          else toks.push({ k: 'table', kind, el: n, st, o: ord(n) });
           continue;
         }
         if (INLINE.has(tag)) {
@@ -392,7 +413,7 @@
         }
         toks.push({ k: 'block' });
         const wrap = wrapLabel(n);
-        if (wrap) toks.push({ k: 'label', text: wrap.text, wrap: 'open' });
+        if (wrap) toks.push({ k: 'label', text: wrap.text, wrap: 'open', o: ord(n) });
         walk(n, st);
         if (wrap) toks.push({ k: 'label', wrap: 'close' });
         toks.push({ k: 'block' });
@@ -463,15 +484,17 @@
   function assemble(toks, baseline) {
     const lines = [];
     let cur = [];
-    const flush = () => { lines.push({ runs: cur }); cur = []; };
+    // A line's source ordinal is the first one any of its runs carries — where
+    // the line BEGINS in the original, which is what a jump wants to land on.
+    const flush = () => { lines.push({ runs: cur, o: firstO(cur) }); cur = []; };
     for (const t of toks) {
-      if (t.k === 'text') cur.push({ text: t.text, st: t.st });
-      else if (t.k === 'anchor') cur.push({ text: '', anchor: t.id });
-      else if (t.k === 'bullet') cur.push({ text: '', bullet: t.src });
-      else if (t.k === 'gloss') cur.push({ text: '', gloss: true });
+      if (t.k === 'text') cur.push({ text: t.text, st: t.st, o: t.o });
+      else if (t.k === 'anchor') cur.push({ text: '', anchor: t.id, o: t.o });
+      else if (t.k === 'bullet') cur.push({ text: '', bullet: t.src, o: t.o });
+      else if (t.k === 'gloss') cur.push({ text: '', gloss: true, o: t.o });
       else if (t.k === 'sep') cur.push({ text: '', sep: true });
       else if (t.k === 'br' || t.k === 'block') flush();
-      else if (t.k === 'fig' || t.k === 'nav' || t.k === 'table' || t.k === 'label') { flush(); lines.push({ special: t }); }
+      else if (t.k === 'fig' || t.k === 'nav' || t.k === 'table' || t.k === 'label') { flush(); lines.push({ special: t, o: t.o }); }
       else if (t.k === 'hr') { flush(); lines.push({ special: { k: 'hr' } }); }
     }
     flush();
@@ -569,34 +592,40 @@
 
     const blocks = [];
     let para = null, deflist = null, ladder = null, pending = [], label = null, inGloss = false;
+    // Every block comes from a line; curO carries that line's source ordinal so
+    // the direct pushes don't each have to name it. The grouped shapes are
+    // flushed long after their opening line, so they keep their own.
+    let curO = null;
+    const push = (b) => { if (b.o == null) b.o = curO; blocks.push(b); return b; };
     const drain = () => { const a = pending; pending = []; return a; };
     // A 'lead' label belongs to the block that FOLLOWS it, so it is claimed
     // when that block starts — not when it is flushed, which can be much later.
     const takeLabel = () => { const l = label; label = null; return l; };
     // brk records where lines were joined, the one thing the merge would
     // otherwise destroy — a caption needs it back to peel its source line off.
-    const flushPara = () => { if (para && norm(para.runs.map((r) => r.text).join(''))) blocks.push({ t: 'p', runs: para.runs, brk: para.brk, anchors: para.anchors, bullet: para.bullet, label: para.label }); para = null; };
-    const flushDef = () => { if (deflist && deflist.items.length) blocks.push({ t: 'deflist', items: deflist.items, anchors: deflist.anchors, label: deflist.label }); deflist = null; };
-    const flushLadder = () => { if (ladder && ladder.items.length) blocks.push({ t: 'ladder', items: ladder.items, anchors: ladder.anchors }); ladder = null; };
+    const flushPara = () => { if (para && norm(para.runs.map((r) => r.text).join(''))) push({ t: 'p', runs: para.runs, brk: para.brk, anchors: para.anchors, bullet: para.bullet, label: para.label, o: para.o }); para = null; };
+    const flushDef = () => { if (deflist && deflist.items.length) push({ t: 'deflist', items: deflist.items, anchors: deflist.anchors, label: deflist.label, o: deflist.o }); deflist = null; };
+    const flushLadder = () => { if (ladder && ladder.items.length) push({ t: 'ladder', items: ladder.items, anchors: ladder.anchors, o: ladder.o }); ladder = null; };
     const flushGroups = () => { flushPara(); flushDef(); flushLadder(); };
 
     for (let i = 0; i < lines.length; i++) {
       const l = lines[i];
+      curO = l.o;
       if (l.special) {
         flushGroups();
         const s = l.special, anchors = drain();
-        if (s.k === 'fig') blocks.push({ t: 'fig', src: s.src, w: s.w, h: s.h, alt: s.alt, cap: null, anchors });
-        else if (s.k === 'nav') blocks.push({ t: 'nav', href: s.href, label: s.label, dir: s.dir, anchors });
-        else if (s.k === 'hr') blocks.push({ t: 'hr', anchors });
-        else if (s.k === 'table') blocks.push({ t: 'table', kind: s.kind, el: s.el, anchors });
+        if (s.k === 'fig') push({ t: 'fig', src: s.src, w: s.w, h: s.h, alt: s.alt, cap: null, anchors });
+        else if (s.k === 'nav') push({ t: 'nav', href: s.href, label: s.label, dir: s.dir, anchors });
+        else if (s.k === 'hr') push({ t: 'hr', anchors });
+        else if (s.k === 'table') push({ t: 'table', kind: s.kind, el: s.el, anchors });
         else if (s.k === 'label') {
           // A label emits no block of its own (the callout it opens, or the
           // block it prefixes, does) — hand the anchors it drained back so the
           // in-page links they carry land on real content.
-          if (s.wrap === 'open') blocks.push({ t: 'open', label: s.text, anchors });
-          else if (s.banner) blocks.push({ t: 'h', level: 2, runs: [{ text: s.text, st: {} }], anchors });
+          if (s.wrap === 'open') push({ t: 'open', label: s.text, anchors });
+          else if (s.banner) push({ t: 'h', level: 2, runs: [{ text: s.text, st: {} }], anchors });
           else {
-            if (s.wrap) blocks.push({ t: 'close' });
+            if (s.wrap) push({ t: 'close' });
             else { label = s.text; if (s.text === 'Begriffe') inGloss = true; }
             pending.push(...anchors);
           }
@@ -610,9 +639,9 @@
         continue;
       }
       const spine = spineItems(l);
-      if (spine) { flushGroups(); blocks.push({ t: 'spine', items: spine, anchors: drain() }); continue; }
+      if (spine) { flushGroups(); push({ t: 'spine', items: spine, anchors: drain() }); continue; }
       if (l.ladder) {
-        if (!ladder) { flushGroups(); ladder = { items: [], anchors: drain() }; }
+        if (!ladder) { flushGroups(); ladder = { items: [], anchors: drain(), o: l.o }; }
         ladder.items.push({ runs: l.runs, arrow: l.ladder === 'arrow' });
         continue;
       }
@@ -621,21 +650,21 @@
       // then fall into it like any other paragraph. "Abbildung: …" is a caption
       // whose marker only looks like a bullet — never a one-item list.
       const bullet = lineBullet(l);
-      if (bullet && !CAP.test(txt)) { flushGroups(); para = { runs: [], brk: [], anchors: drain(), bullet, label: takeLabel() }; }
+      if (bullet && !CAP.test(txt)) { flushGroups(); para = { runs: [], brk: [], anchors: drain(), bullet, label: takeLabel(), o: l.o }; }
 
       const isEntry = !CAP.test(txt) && ((glossFlag[i] && (glossFlag[i - 1] || glossFlag[i + 1])) ||
         (inGloss && GLOSS_LOOSE.test(txt) && txt.length <= 300));
       if (!bullet && isEntry) {
         flushPara();
-        if (!deflist) deflist = { items: [], anchors: drain(), label: takeLabel() };
+        if (!deflist) deflist = { items: [], anchors: drain(), label: takeLabel(), o: l.o };
         deflist.items.push({ runs: l.runs });
         continue;
       }
       inGloss = false;   // the first line that isn't an entry ends the list
       flushDef();
       const lvl = bullet ? 0 : headingLevel(l);
-      if (lvl) { flushPara(); blocks.push({ t: 'h', level: lvl, runs: l.runs, anchors: drain(), label: takeLabel() }); continue; }
-      if (!para) para = { runs: [], brk: [], anchors: drain(), label: takeLabel() };
+      if (lvl) { flushPara(); push({ t: 'h', level: lvl, runs: l.runs, anchors: drain(), label: takeLabel() }); continue; }
+      if (!para) para = { runs: [], brk: [], anchors: drain(), label: takeLabel(), o: l.o };
       if (para.runs.length) { para.brk.push(para.runs.length); para.runs.push({ text: ' ', st: {} }); }
       para.runs.push(...l.runs);
     }
@@ -827,8 +856,8 @@
   function renderInlineOf(el, counts, baseline) {
     const runs = [];
     for (const t of tokenize(el, counts, baseline)) {
-      if (t.k === 'text') runs.push({ text: t.text, st: t.st });
-      else if (t.k === 'anchor') runs.push({ text: '', anchor: t.id });
+      if (t.k === 'text') runs.push({ text: t.text, st: t.st, o: t.o });
+      else if (t.k === 'anchor') runs.push({ text: '', anchor: t.id, o: t.o });
       else if (t.k === 'br' || t.k === 'block') runs.push({ brk: true });
     }
     const out = [];
@@ -919,9 +948,11 @@
           if (band) td.className = 'pr-band';
           else if (head || isBluish(cellBg(c)) || isCellBold(c)) td.className = 'pr-th';
           td.innerHTML = renderInlineOf(c, counts, baseline);
-          row.appendChild(td);
+          // Cells and rows ARE live source elements here — the one place the
+          // pipeline hands them over whole, so provenance costs a call.
+          row.appendChild(stamp(td, ord(c)));
         });
-        out.appendChild(row);
+        out.appendChild(stamp(row, ord(g.cells[0].parentElement)));
       });
       if (heads.length) out.insertBefore(tableHead(heads, counts, baseline), out.firstChild);
       return out;
@@ -965,7 +996,7 @@
     const frag = document.createDocumentFragment();
     const h = headRuns(cell, counts, baseline);
     if (!h) return frag;
-    const add = (cls, runs) => { const p = document.createElement('p'); p.className = cls; p.innerHTML = renderRuns(runs); frag.appendChild(p); };
+    const add = (cls, runs) => { const p = document.createElement('p'); p.className = cls; p.innerHTML = renderRuns(runs); frag.appendChild(stamp(p, firstO(runs))); };
     add('pr-box-title', h.title);
     if (h.src) add('pr-box-sub', h.src);
     return frag;
@@ -977,7 +1008,7 @@
     const add = (cls, runs) => {
       const s = document.createElement('span'); s.className = cls;
       s.innerHTML = renderRuns(runs).trim();
-      if (s.innerHTML) cap.appendChild(s);
+      if (s.innerHTML) cap.appendChild(stamp(s, firstO(runs)));
     };
     cells.forEach((c, i) => {
       const h = headRuns(c, counts, baseline);
@@ -1008,7 +1039,7 @@
         const box = document.createElement('aside');
         box.className = 'pr-callout';
         box.appendChild(labelEl(b.label));
-        into.appendChild(box);
+        into.appendChild(stamp(box, b.o));
         stack.push(into); into = box;
         navGroup = linkList = list = null;
         continue;
@@ -1018,7 +1049,7 @@
         linkList = list = null;
         emitAnchors(into, b.anchors, seen);
         if (!navGroup) { navGroup = document.createElement('nav'); navGroup.className = 'pr-navrow'; into.appendChild(navGroup); }
-        const a = document.createElement('a'); a.className = 'pr-nav'; a.href = b.href; a.textContent = b.label;
+        const a = document.createElement('a'); a.className = 'pr-nav'; a.href = b.href; a.textContent = b.label; stamp(a, b.o);
         // The source usually paints "Weiter" left of "Zurück"; sort into pager
         // order instead (back · everything else · forward), stably.
         const rank = navRank(b.label);
@@ -1030,7 +1061,7 @@
         list = null;
         emitAnchors(into, b.anchors, seen);
         if (!linkList) { linkList = document.createElement('nav'); linkList.className = 'pr-linklist'; into.appendChild(linkList); }
-        const p = document.createElement('p'); p.innerHTML = renderRuns(b.runs); linkList.appendChild(p);
+        const p = document.createElement('p'); p.innerHTML = renderRuns(b.runs); linkList.appendChild(stamp(p, b.o));
         continue;
       }
       linkList = null;
@@ -1043,7 +1074,7 @@
           list = document.createElement('ul'); list.className = 'pr-list'; list.dataset.bullet = kind;
           listOf = kind; into.appendChild(list);
         }
-        const li = document.createElement('li'); li.innerHTML = renderRuns(b.runs); list.appendChild(li);
+        const li = document.createElement('li'); li.innerHTML = renderRuns(b.runs); list.appendChild(stamp(li, b.o));
         continue;
       }
       list = null;
@@ -1053,24 +1084,26 @@
       let box = into;
       if (b.label && b.t !== 'deflist') {
         if (b.t === 'h') into.appendChild(labelEl(b.label));
-        else { box = document.createElement('aside'); box.className = 'pr-callout'; box.appendChild(labelEl(b.label)); into.appendChild(box); }
+        else { box = document.createElement('aside'); box.className = 'pr-callout'; box.appendChild(labelEl(b.label)); into.appendChild(stamp(box, b.o)); }
       }
-      if (b.t === 'h') { const h = document.createElement('h' + b.level); h.innerHTML = renderRuns(b.runs); box.appendChild(h); }
-      else if (b.t === 'p') { const p = document.createElement('p'); p.innerHTML = renderRuns(b.runs); if (norm(p.textContent) || p.querySelector('[id]')) box.appendChild(p); }
-      else if (b.t === 'hr') box.appendChild(document.createElement('hr'));
+      if (b.t === 'h') { const h = document.createElement('h' + b.level); h.innerHTML = renderRuns(b.runs); box.appendChild(stamp(h, b.o)); }
+      else if (b.t === 'p') { const p = document.createElement('p'); p.innerHTML = renderRuns(b.runs); if (norm(p.textContent) || p.querySelector('[id]')) box.appendChild(stamp(p, b.o)); }
+      else if (b.t === 'hr') box.appendChild(stamp(document.createElement('hr'), b.o));
       else if (b.t === 'deflist') {
         const dl = document.createElement('dl'); dl.className = 'pr-defs';
         // The source pads its entries with hard spaces and stray breaks; a
         // definition list is a grid, so the padding only knocks it off its rails.
-        for (const it of b.items) { const [term, def] = splitAtColon(it.runs); const dt = document.createElement('dt'); dt.innerHTML = renderRuns(term).trim(); const dd = document.createElement('dd'); dd.innerHTML = renderRuns(def).trim(); dl.appendChild(dt); dl.appendChild(dd); }
+        // Per entry, not just per list: a Begriffe list runs to 25 entries, and
+        // "somewhere in that list" is not an answer worth jumping to.
+        for (const it of b.items) { const io = firstO(it.runs); const [term, def] = splitAtColon(it.runs); const dt = document.createElement('dt'); dt.innerHTML = renderRuns(term).trim(); const dd = document.createElement('dd'); dd.innerHTML = renderRuns(def).trim(); dl.appendChild(stamp(dt, io)); dl.appendChild(stamp(dd, io)); }
         // The page's own Begriffe list: a labelled, tightly-set glossary rather
         // than the airy two-column definition list prose uses.
         if (isGlossList(b)) {
           dl.classList.add('pr-defs-tight');
           const sec = document.createElement('section'); sec.className = 'pr-gloss';
           sec.append(labelEl(b.label || 'Begriffe'), dl);
-          box.appendChild(sec);
-        } else box.appendChild(dl);
+          box.appendChild(stamp(sec, b.o));
+        } else box.appendChild(stamp(dl, b.o));
       }
       else if (b.t === 'fig') {
         const fig = document.createElement('figure'); fig.className = 'pr-fig';
@@ -1082,11 +1115,13 @@
         if (b.cap) {
           const fc = document.createElement('figcaption'); fc.className = 'pr-figcap';
           const t = document.createElement('span'); t.className = 'pr-figcap-title'; t.innerHTML = renderRuns(b.cap.title).trim();
-          fc.appendChild(t);
-          if (b.cap.src) { const s = document.createElement('span'); s.className = 'pr-figcap-src'; s.innerHTML = renderRuns(b.cap.src).trim(); fc.appendChild(s); }
+          fc.appendChild(stamp(t, firstO(b.cap.title)));
+          // The citation half is sometimes absorbed from the paragraph AFTER the
+          // figure (CAP_SRC_BLOCK) — its own ordinal is the only thing that says so.
+          if (b.cap.src) { const s = document.createElement('span'); s.className = 'pr-figcap-src'; s.innerHTML = renderRuns(b.cap.src).trim(); fc.appendChild(stamp(s, firstO(b.cap.src))); }
           fig.appendChild(fc);
         }
-        box.appendChild(fig);
+        box.appendChild(stamp(fig, b.o));
       }
       else if (b.t === 'ladder') {
         const d = document.createElement('div'); d.className = 'pr-ladder';
@@ -1095,9 +1130,9 @@
           e.className = it.arrow ? 'pr-ladder-arrow' : 'pr-ladder-step';
           if (it.arrow) e.setAttribute('aria-hidden', 'true');
           e.innerHTML = renderRuns(it.runs);
-          d.appendChild(e);
+          d.appendChild(stamp(e, firstO(it.runs)));
         }
-        box.appendChild(d);
+        box.appendChild(stamp(d, b.o));
       }
       else if (b.t === 'spine') {
         const nav = document.createElement('nav'); nav.className = 'pr-spine';
@@ -1108,11 +1143,11 @@
           // renderRuns would emit a second <a> inside this one.
           a.innerHTML = renderRuns(it.runs.map((r) => Object.assign({}, r,
             { st: Object.assign({}, r.st, { href: null, term: undefined }) }))).trim();
-          if (a.textContent.trim()) nav.appendChild(a);
+          if (a.textContent.trim()) nav.appendChild(stamp(a, firstO(it.runs)));
         }
-        if (nav.children.length) box.appendChild(nav);
+        if (nav.children.length) box.appendChild(stamp(nav, b.o));
       }
-      else if (b.t === 'table') box.appendChild(renderTable(b, counts, baseline));
+      else if (b.t === 'table') box.appendChild(stamp(renderTable(b, counts, baseline), b.o));
     }
     const holder = document.createElement('div');
     holder.appendChild(frag);
@@ -1216,7 +1251,37 @@
     });
   }
 
+  /* The last moment the original exists. Everything that stamps has run by now
+     — box tables re-enter tokenize/renderBlocks from inside renderTable, so an
+     earlier snapshot would miss their cells — and the attribute stripping below
+     has not, so the body keeps the bgcolor and link colours it was drawn with.
+     document.baseURI (not location.href) keeps the dev harness's <base>
+     resolving the figures.
+
+     Scripts come out of the clone. The book itself has none, but the dev
+     harness loads the whole src/ chain from <body> — and a srcdoc frame is
+     same-origin, so the snapshot cheerfully reskinned itself inside its own
+     window. What the frame must show is the page BEFORE any of this ran. */
+  let snap = null;
+  function takeSnapshot() {
+    try {
+      const body = document.body.cloneNode(true);
+      body.querySelectorAll('script, noscript, style, link').forEach((n) => n.remove());
+      snap = '<!doctype html><html><head><meta charset="utf-8"><base href="' +
+        document.baseURI.replace(/"/g, '&quot;') + '">' + SNAP_CSS + '</head>' +
+        body.outerHTML + '</html>';
+    } catch (e) { snap = null; }
+  }
+  // Injected into the snapshot, not the page: the only thing inspect.js needs
+  // the original document to know is how to show where it landed.
+  const SNAP_CSS = '<style>' +
+    '.pr-o-hit{outline:2px solid #0e8373;outline-offset:3px;background:rgba(14,131,115,.13)}' +
+    '@keyframes prOFlash{from{background:rgba(14,131,115,.42)}to{background:rgba(14,131,115,.13)}}' +
+    '.pr-o-hit{animation:prOFlash .9s ease-out}' +
+    '</style>';
+
   function mountReader(reader) {
+    takeSnapshot();
     // The site's <body> carries an inline background-color (plus legacy
     // bgcolor/link attrs); inline style outranks content.css's
     // `html.pr-on body { background: var(--paper) }` and bleeds through —
@@ -1231,6 +1296,7 @@
 
   /* ══ public entry points ═══════════════════════════════════════════════ */
   function reflow() {
+    seq = 0;
     const src = document.body;
     const baseline = measureBaseline(src);
     const counts = imgCounts(src);
@@ -1299,5 +1365,5 @@
 
   // pageRef/ordinal are the book's only URL→place map; bookmarks.js names a
   // stored mark's page with them rather than storing the chapter on every one.
-  PR.reskin = { reflow, renderHome, isHome, pageRef, ordinal };
+  PR.reskin = { reflow, renderHome, isHome, pageRef, ordinal, snapshot: () => snap };
 })();

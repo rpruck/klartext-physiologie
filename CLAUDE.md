@@ -95,6 +95,42 @@ the caption lines also seed the glossary heuristic — hence the `CAP` guards in
   heading with a strip after it. The mid-page strips (I.1 has six) are the same shape and render
   as compact sub-indices.
 
+### Provenance — reading the original back
+
+Every heuristic above was tuned by comparing the rendered result against the markup it came from,
+and the pipeline destroys that markup (`mountReader` wipes `<body>`). Two additions make the
+comparison a feature rather than a second browser window with the extension switched off:
+
+- **The stamp.** `ord(el)` in `reskin.js` numbers a source element the first time the walk consults
+  it and writes `data-pr-o` on it. The number rides `token → line → block → rendered element`: a
+  text token takes it from the text node's parent, `fig`/`table`/`label`/`nav`/`bullet` tokens from
+  their own element, a line from the first run that has one, a block from its opening line
+  (the grouped shapes — para, deflist, ladder — keep their own, since they are flushed long after
+  it), and `renderBlocks` writes it out through `stamp()`. Deflist entries, ladder steps, spine
+  links, caption halves and table rows/cells are stamped individually, so a jump lands on the
+  entry rather than on the list. Lazy on purpose: only consulted elements are numbered.
+  This is what text matching could never do — the label blocks whose words are *pictures*, the box
+  titles split by `headRuns`, the hyphen-unwrapped cells, the `"NNach"` typo, the 12×12 dot in
+  front of every "Abbildung:" caption. Synthetic blocks (the crumb, the pager pills, the home hero)
+  carry no stamp and `inspect.js` falls back to the nearest stamped block above them.
+- **The snapshot.** `takeSnapshot()` runs as the first statement of `mountReader()` — the one point
+  after *all* stamping (box tables re-enter `tokenize`/`renderBlocks` from inside `renderTable`) and
+  before the attribute stripping, so the body keeps the `bgcolor` and link colours it was drawn
+  with. Held as a string for the session (~900 KB on I.1) and read by `PR.reskin.snapshot()`.
+  `<script>` comes out of the clone: the book has none, but the dev harness loads the whole `src/`
+  chain from `<body>`, and a `srcdoc` frame is same-origin — left in, the snapshot reskinned itself
+  inside its own window. `<base href>` is `document.baseURI`, not `location.href`, so the harness's
+  own `<base>` keeps resolving the figures.
+
+`inspect.js` is then one `closest('[data-pr-o]')` and one `querySelector`. It arms from a topbar
+icon (`html.pr-inspect` gives the reader a crosshair and suppresses selection, which also keeps
+`tools.js`'s highlight popover out of the way), draws a hairline above the block under the pointer,
+and on click renders the snapshot into an `<iframe srcdoc>` scrolled to the match. The picker
+**stays armed** while the window is open and later picks only move the marker — never re-render —
+so shrinking the window to one half turns the reader into a walkable comparison. A target with no
+shape worth flashing (that 12×12 dot, an empty `<a name>`) grows to the first ancestor that has
+one. Geometry persists under its own `inspect` storage key, not in `settings`.
+
 ### Sections and reading progress
 
 A section page is otherwise one uninterrupted column, so `src/outline.js` folds it into an
@@ -172,7 +208,7 @@ to it (`PR.reskin`, `PR.settings`, `PR.ui`, `PR.tools`, `PR.anchor`, `PR.fonts`,
   paint the user's cached paper colour. `body` is `visibility:hidden` (layout preserved) until the
   reskin is ready, so `getComputedStyle().fontSize` stays truthful during heading measurement.
 - **`document_end` chain** (order fixed in `manifest.json`): `store → visited → anchor → fonts →
-  reskin → ui → tools → outline → progress → bookmarks → settings → activate → content`. `src/content.js` is the
+  reskin → ui → tools → outline → progress → bookmarks → inspect → settings → activate → content`. `src/content.js` is the
   orchestrator; the critical invariant is **measure original sizes → build reader → apply settings →
   add `html.pr-on` → build the outline open → assign block ids → restore annotations → fold →
   reveal (`html.pr-ready`)**. `content.css` is injected but inert until `.pr-on`.
@@ -188,6 +224,7 @@ Key files:
 | `src/outline.js` | The page's sections, read off the author's strip, and the accordion over them |
 | `src/progress.js` | The reading rail: read-state per section, bookmarks, per-page reset |
 | `src/bookmarks.js` | Every bookmark in the book, in one drawer — read straight out of storage |
+| `src/inspect.js` | The original beside the reskin: pick a block, read the markup it came from |
 | `src/tools.js` | Study interactions (highlight / notes / pins / lightbox / glossary hover card) |
 | `src/anchor.js` | Self-healing annotation anchoring — the biggest correctness surface |
 | `src/store.js` | `chrome.storage.local` wrapper, the shared per-page record (`PR.page`), and a tiny synchronous localStorage mirror for `boot.js` |

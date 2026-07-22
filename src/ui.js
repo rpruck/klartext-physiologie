@@ -21,6 +21,10 @@
      ☰/≡, which sit on a different baseline in every fallback font. */
   const RIBBON = `<svg class="tb-glyph" viewBox="0 0 10 13" aria-hidden="true"><path d="M1 1.6h8v10.2l-4-3-4 3z"/></svg>`;
   const LIST = `<svg class="tb-glyph tb-glyph-list" viewBox="0 0 13 10" aria-hidden="true"><path d="M1 1.4h11M1 5h11M1 8.6h7"/></svg>`;
+  /* The source glyph. Drawn rather than typed for the same reason as the two
+     above: ⟨/⟩ assembled from characters sits on three different baselines
+     depending on which fallback font answers for the chevrons. */
+  const SOURCE = `<svg class="tb-glyph tb-glyph-src" viewBox="0 0 14 11" aria-hidden="true"><path d="M4.7 2.2 1.6 5.5l3.1 3.3M9.3 2.2l3.1 3.3-3.1 3.3M8.1 1.2 5.9 9.8"/></svg>`;
 
   /* The icon buttons say what they do on hover (data-tip), not in the bar —
      three words of German each would crowd out the two labelled controls.
@@ -31,6 +35,7 @@
       <button class="tb-btn tb-icon" id="unpinAll" hidden data-tip="Alle Abbildungen lösen" aria-label="Alle Abbildungen lösen">⊘</button>
       <button class="tb-btn tb-icon" id="laneImg" data-tip="Bildspalte" aria-label="Bildspalte" aria-pressed="true">◧</button>
       <button class="tb-btn tb-icon" id="laneNotes" data-tip="Notizspalte" aria-label="Notizspalte" aria-pressed="true">◨</button>
+      <button class="tb-btn tb-icon" id="inspectBtn" data-tip="Original ansehen" aria-label="Original ansehen" aria-pressed="false">${SOURCE}</button>
       <div class="tb-split" id="bookmarkPill">
         <button class="tb-btn tb-half" id="bookmarkBtn" data-tip="Hier ein Lesezeichen setzen" aria-label="Hier ein Lesezeichen setzen">${RIBBON}</button>
         <button class="tb-btn tb-half" id="openMarks" data-tip="Lesezeichen des Buches" aria-label="Lesezeichen des Buches">${LIST}</button>
@@ -68,6 +73,25 @@
       </div>
     </div>`;
   const TOASTER = `<div class="toaster" id="toaster" aria-live="polite"></div>`;
+
+  /* The source window: a hairline rule that follows the pointer while the
+     picker is armed, the movable frame the original renders in, and the
+     screenshot reminder that hangs in the opposite corner from it. No backdrop
+     — the whole point is that the reader stays visible and clickable beside it.
+     inspect.js fills #inspectHints and appends the iframe. */
+  const INSPECT = `
+    <div class="insp-rule" id="inspectRule"><span class="insp-rule-tag">Original</span></div>
+    <aside class="insp-win" id="inspectWin" aria-label="Originalquelltext">
+      <div class="insp-bar">
+        <span class="spacer"></span>
+        <span class="insp-title">Original</span>
+        <button class="insp-full" title="Ursprüngliche Größe" aria-label="Ursprüngliche Größe">⤢</button>
+        <button class="insp-close" title="Schließen" aria-label="Schließen">✕</button>
+      </div>
+      <div class="insp-body"></div>
+      <div class="insp-resize" aria-hidden="true"></div>
+    </aside>
+    <div class="insp-hints" id="inspectHints"></div>`;
 
   // Right note gutter + text-selection popover (highlight colours + note).
   const NOTEGUTTER = `<aside class="pr-note-gutter" id="noteGutter" aria-label="Randnotizen"></aside>`;
@@ -264,7 +288,7 @@
     root.className = 'pr-ui-root';
     // one-time activation overlay (played once per session by activate.js)
     const ACTIVATE = `<div class="activate" id="activate"></div><div class="activate-line" id="activateLine"></div>`;
-    root.innerHTML = TOPBAR + RAIL + PINRAIL + NOTEGUTTER + LIGHTBOX + HLPOP + PANEL + MARKS + TOASTER + ACTIVATE;
+    root.innerHTML = TOPBAR + RAIL + PINRAIL + NOTEGUTTER + LIGHTBOX + HLPOP + PANEL + MARKS + INSPECT + TOASTER + ACTIVATE;
     shadow.appendChild(root);
     PR.ui.root = root;
 

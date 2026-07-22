@@ -76,6 +76,7 @@
     if (PR.outline) PR.outline.applyState();
     if (PR.progress) PR.progress.init(reader);
     if (PR.bookmarks) PR.bookmarks.init();
+    if (PR.inspect) PR.inspect.init(reader);
 
     // 9 · Reveal the finished page + play the one-time activation animation.
     reveal();

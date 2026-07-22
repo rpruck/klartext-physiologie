@@ -11,7 +11,7 @@ body_attrs = m.group(1) if m else ''
 body = m.group(2) if m else src
 scripts = ''.join(f'<script src="{BASE}/src/{f}?v={V}"></script>\n' for f in
   ['store.js','visited.js','anchor.js','fonts.js','reskin.js','ui.js','tools.js','outline.js','progress.js',
-   'bookmarks.js','settings.js','activate.js','content.js'])
+   'bookmarks.js','inspect.js','settings.js','activate.js','content.js'])
 # A localStorage-backed chrome.storage.local, so anything that persists
 # (settings, annotations, the visited record) is exercisable here too.
 # ?seen=/i.1.htm,/i.2.htm preseeds the visited record before boot.

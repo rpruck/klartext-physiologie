@@ -448,6 +448,101 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
 .lb-tools button { font-family: var(--font-label); font-size: .66rem; letter-spacing: .08em; text-transform: uppercase; color: #ece7db; background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .22); border-radius: 999px; padding: .5rem .9rem; cursor: pointer; transition: .2s var(--ease); }
 .lb-tools button:hover { background: rgba(255, 255, 255, .16); }
 
+/* ── the original, beside the reskin (inspect.js) ────────────────────────
+   No backdrop and no dimming: unlike the lightbox, this window is meant to be
+   used WITH the page, not instead of it — shrink it to one half and the reader
+   in the other half stays lit, legible and pickable. */
+
+/* The rule the picker draws above the block under the pointer. Hairline in the
+   accent, with the word set in the margin at its right end rather than over the
+   text, so it never covers the line it is pointing at. */
+.insp-rule {
+  position: fixed; z-index: 88; height: 0; pointer-events: none;
+  border-top: 1px solid var(--accent);
+  opacity: 0; transition: opacity .12s var(--ease);
+}
+.insp-rule.show { opacity: 1; }
+.insp-rule-tag {
+  position: absolute; right: 0; top: -1.15rem;
+  font-family: var(--font-label); font-size: .56rem; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--accent-ink);
+  background: var(--accent-tint); border: 1px solid var(--accent-line);
+  border-radius: 999px; padding: .1rem .4rem;
+}
+
+.insp-win {
+  position: fixed; z-index: 90; display: none; flex-direction: column;
+  pointer-events: auto; overflow: hidden;
+  border: 1px solid var(--hair); border-radius: 12px;
+  background: var(--paper); box-shadow: var(--shadow);
+}
+.insp-win.show { display: flex; animation: inspIn .22s var(--ease); }
+@keyframes inspIn { from { opacity: 0; transform: scale(.985); } to { opacity: 1; transform: none; } }
+.insp-win.resizing, .insp-win.grabbing { user-select: none; }
+/* The iframe swallows pointer events, which kills a drag the moment the cursor
+   crosses it — so while one is running the source goes inert. */
+.insp-win.resizing .insp-frame, .insp-win.grabbing .insp-frame { pointer-events: none; }
+
+/* Title and buttons all sit right: at the window's default size its top-left
+   corner is under the screenshot hints, which own that corner of the viewport —
+   so the left half of the bar is nothing but grab area. */
+.insp-bar {
+  display: flex; align-items: center; gap: .4rem; flex: none;
+  padding: .34rem .5rem .34rem .7rem; cursor: grab; touch-action: none;
+  border-bottom: 1px solid var(--hair-soft);
+  background: color-mix(in srgb, var(--paper) 55%, transparent);
+}
+.insp-win.grabbing .insp-bar { cursor: grabbing; }
+.insp-title {
+  font-family: var(--font-label); font-size: .58rem; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-soft);
+}
+.insp-bar .spacer { flex: 1; }
+.insp-bar button { border: 0; background: transparent; color: var(--ink-soft); cursor: pointer; line-height: 1; padding: .1rem .28rem; font-size: .8rem; }
+.insp-bar button:hover { color: var(--ink); }
+
+/* White, always: the source paints its own background (bgcolor on <body>) and a
+   dark paper behind it would show through as a frame the original never had. */
+.insp-body { flex: 1; min-height: 0; background: #fff; }
+.insp-frame { width: 100%; height: 100%; border: 0; display: block; }
+.insp-resize {
+  position: absolute; right: 0; bottom: 0; width: 18px; height: 18px;
+  cursor: nwse-resize; touch-action: none;
+  background: linear-gradient(135deg, transparent 45%, var(--accent-line) 45%, var(--accent-line) 62%, transparent 62%, transparent 74%, var(--accent-line) 74%, var(--accent-line) 90%, transparent 90%);
+  border-bottom-right-radius: 12px;
+}
+
+/* Top-left, the far corner from the topbar and outside the window: the whole
+   reason to put the two side by side is usually to photograph them, and every
+   OS spells that differently. Says itself once, then fades back until reached. */
+.insp-hints {
+  position: fixed; top: .7rem; left: .8rem; z-index: 91; display: none;
+  pointer-events: auto; max-width: 17rem;
+  flex-direction: column; gap: .18rem;
+  padding: .5rem .7rem;
+  border: 1px solid var(--hair); border-radius: 10px;
+  background: color-mix(in srgb, var(--paper) 82%, transparent);
+  backdrop-filter: saturate(1.1) blur(8px);
+  transition: opacity .5s var(--ease);
+}
+.insp-hints.show { display: flex; }
+.insp-hints.dim { opacity: .35; }
+.insp-hints:hover { opacity: 1; }
+.insp-hints .ih-title {
+  font-family: var(--font-label); font-size: .54rem; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--ink-soft); margin-bottom: .15rem;
+}
+.insp-hints .ih-row {
+  display: flex; align-items: baseline; gap: .45rem;
+  font-family: var(--font-label); font-size: .62rem; color: var(--ink-soft);
+}
+.insp-hints kbd {
+  font-family: var(--font-label); font-size: .6rem; color: var(--ink);
+  border: 1px solid var(--hair); border-radius: 4px; padding: .05rem .28rem;
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+  white-space: nowrap; flex: none;
+}
+
 /* ── undo toaster (sonner-inspired) ────────────────────────────────────── */
 .toaster { position: fixed; right: calc(1.2rem + var(--rail-w)); bottom: 1.2rem; z-index: 92; display: flex; flex-direction: column; gap: .55rem; align-items: flex-end; pointer-events: none; }
 .sonner { pointer-events: auto; display: flex; align-items: center; gap: .9rem; min-width: 230px; max-width: 340px; background: color-mix(in srgb, var(--paper) 78%, #fff); border: 1px solid var(--hair); border-radius: 12px; box-shadow: var(--shadow); padding: .7rem .8rem .7rem .95rem; transform: translateY(14px) scale(.96); opacity: 0; transition: transform .32s var(--ease), opacity .32s var(--ease); }
