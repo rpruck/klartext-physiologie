@@ -118,7 +118,10 @@ accordion and `src/progress.js` draws a ruler of it down the right edge.
   by the `.pr-block` content hash like annotations are. The automatic one is a high-water mark
   too (`rankOf` orders marks by segment + fraction): scrolling back to re-read a sentence is
   re-reading, not un-reading, and holding the place you got to while you do it is the whole job.
-  Only the rail's reset moves it back.
+  Only the rail's reset moves it back. The rail opens on *approach* (`REACH`, a `pointermove`
+  proximity test adding `.awake`) rather than on hover — widening the element to reach that far
+  would blanket 140px of margin in `pointer-events` and take the text under it out of selection
+  range on a narrow window.
 
 Two traps this cost real time on, both from `content-visibility: hidden`:
 

@@ -23,6 +23,13 @@
 
   const PITCH = 10;                    // px between ticks (the reference's density)
   const READ_LINE = 0.33;              // where on screen "what I am reading" sits
+  /* How far left of the window edge the rail starts paying attention. Widening
+     the rail element itself to reach this far would blanket a 140px strip of
+     the margin in pointer-events and take the text under it out of selection
+     range on a narrow window — so the lane stays narrow and proximity is
+     measured instead. */
+  const REACH = 140;
+  const REACH_TOP = 64;                // …but not up in the topbar's corner
   const q = (s) => (PR.ui && PR.ui.shadow) ? PR.ui.shadow.querySelector(s) : null;
 
   let reader = null;
@@ -345,6 +352,21 @@
       if (!t) return;
       jump(+t.dataset.seg, t.dataset.f ? +t.dataset.f : 0);
     });
+
+    // Approach, not contact: the rail comes awake while the pointer is still a
+    // finger's width to its left, and the CSS linger keeps it up on the way back.
+    let wakeRaf = 0, awake = false;
+    document.addEventListener('pointermove', (ev) => {
+      if (wakeRaf) return;
+      wakeRaf = requestAnimationFrame(() => {
+        wakeRaf = 0;
+        const near = ev.clientX >= window.innerWidth - REACH && ev.clientY >= REACH_TOP;
+        if (near === awake) return;
+        awake = near;
+        if (rail) rail.classList.toggle('awake', near);
+      });
+    }, { passive: true });
+    document.addEventListener('pointerleave', () => { awake = false; if (rail) rail.classList.remove('awake'); });
 
     const tick = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(measure); };
     window.addEventListener('scroll', () => {

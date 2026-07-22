@@ -193,11 +193,15 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
   text-align: right; cursor: pointer;
   opacity: 0; transition: opacity .25s var(--ease), color .2s var(--ease);
 }
-.pr-rail:hover .rail-label { opacity: .75; pointer-events: auto; }
+/* `.awake` is progress.js reporting the pointer is near the rail but not yet on
+   it — the rail opens as you approach, the way makingsoftware's does. */
+.pr-rail:hover .rail-label,
+.pr-rail.awake .rail-label { opacity: .75; pointer-events: auto; }
 .rail-label:hover { color: var(--accent-ink); opacity: 1; }
 /* the section being read names itself, so no second label rides the accent tick */
 .rail-label.now { color: var(--accent-ink); }
-.pr-rail:hover .rail-label.now { opacity: 1; }
+.pr-rail:hover .rail-label.now,
+.pr-rail.awake .rail-label.now { opacity: 1; }
 /* two sections a tick apart would print their names on top of each other */
 .rail-label.crowded { display: none; }
 
@@ -223,7 +227,8 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
   display: flex; flex-direction: column; align-items: flex-end; gap: .3rem;
   opacity: 0; transition: opacity .25s var(--ease); pointer-events: none;
 }
-.pr-rail:hover .rail-foot { opacity: 1; pointer-events: auto; }
+.pr-rail:hover .rail-foot,
+.pr-rail.awake .rail-foot { opacity: 1; pointer-events: auto; }
 .rail-pct { font-family: var(--font-label); font-size: .62rem; letter-spacing: .06em; font-variant-numeric: tabular-nums; color: var(--ink-soft); }
 .rail-reset { font-family: var(--font-label); font-size: .55rem; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; color: var(--ink-soft); background: transparent; border: 1px solid var(--hair); border-radius: 999px; padding: .25rem .5rem; cursor: pointer; }
 .rail-reset:hover { color: var(--ink); border-color: var(--accent-line); }
@@ -237,6 +242,8 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
 .rail-label, .rail-foot, .rail-mark-cap, .rail-mark-x { transition-delay: .5s; }
 .pr-rail:hover .rail-label,
 .pr-rail:hover .rail-foot,
+.pr-rail.awake .rail-label,
+.pr-rail.awake .rail-foot,
 .rail-mark:hover .rail-mark-cap,
 .rail-mark:hover .rail-mark-x { transition-delay: 0s; }
 
