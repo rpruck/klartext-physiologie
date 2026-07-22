@@ -80,17 +80,51 @@
   }
   const persist = () => PR.store && PR.store.set('inspect', geo);
 
-  /* ── the source window ────────────────────────────────────────────────── */
+  /* ── the source window ────────────────────────────────────────────────────
+     Loaded from a blob: URL, NOT srcdoc. An iframe srcdoc document never enters
+     quirks mode — the parser skips the doctype's mode-setting step for it
+     entirely — so the book, which is quirks on every page, would be laid out
+     here under rules it has never once been laid out under. A blob: URL is
+     parsed like any other document and honours the doctype the snapshot
+     carries. It inherits this page's origin, so contentDocument stays reachable
+     for the marker and the scrolling. */
+  const EMPTY = '<!doctype html><p style="font:14px sans-serif;padding:2rem">Kein Original gespeichert.</p>';
+
   function ensureFrame() {
     if (frame) return;
-    const snap = PR.reskin && PR.reskin.snapshot && PR.reskin.snapshot();
+    const snap = (PR.reskin && PR.reskin.snapshot && PR.reskin.snapshot()) || EMPTY;
     frame = document.createElement('iframe');
     frame.className = 'insp-frame';
     frame.setAttribute('title', 'Originalquelltext');
-    frame.addEventListener('load', () => { loaded = true; if (want != null) { goto(want); want = null; } });
-    if (snap) frame.srcdoc = snap;
-    else frame.srcdoc = '<!doctype html><p style="font:14px sans-serif;padding:2rem">Kein Original gespeichert.</p>';
+    frame.addEventListener('load', onFrameLoad);
+    try {
+      const url = URL.createObjectURL(new Blob([snap], { type: 'text/html;charset=utf-8' }));
+      frame.dataset.blob = url;
+      frame.src = url;
+    } catch (e) {
+      frame.srcdoc = snap;                   // no Blob/URL: standards mode, but readable
+    }
     win.querySelector('.insp-body').appendChild(frame);
+  }
+
+  function onFrameLoad() {
+    // A blob whose origin we cannot reach into would leave the window showing
+    // the page but never marking anything. Fall back once to srcdoc, which is
+    // always same-origin — the wrong rendering mode beats a dead window.
+    let reachable = false;
+    try { reachable = !!frame.contentDocument; } catch (e) { reachable = false; }
+    const url = frame.dataset.blob;
+    if (url) { URL.revokeObjectURL(url); delete frame.dataset.blob; }
+    if (!reachable) {
+      frame.removeEventListener('load', onFrameLoad);
+      const snap = (PR.reskin && PR.reskin.snapshot && PR.reskin.snapshot()) || EMPTY;
+      frame.addEventListener('load', onFrameLoad, { once: true });
+      frame.removeAttribute('src');
+      frame.srcdoc = snap;
+      return;
+    }
+    loaded = true;
+    if (want != null) { goto(want); want = null; }
   }
 
   // Move the marker and scroll — never re-render. A second pick must keep

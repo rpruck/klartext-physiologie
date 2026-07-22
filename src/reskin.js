@@ -1259,15 +1259,29 @@
      resolving the figures.
 
      Scripts come out of the clone. The book itself has none, but the dev
-     harness loads the whole src/ chain from <body> — and a srcdoc frame is
+     harness loads the whole src/ chain from <body> — and the frame is
      same-origin, so the snapshot cheerfully reskinned itself inside its own
-     window. What the frame must show is the page BEFORE any of this ran. */
+     window. What the frame must show is the page BEFORE any of this ran.
+
+     The page's OWN doctype leads, verbatim. It is what puts the book in quirks
+     mode — where a <td> ignores an inherited font size, among other things — so
+     a snapshot introduced by a tidy <!doctype html> would be a page the browser
+     never laid out. A page with no doctype gets none, which is quirks too. */
   let snap = null;
+  function docType() {
+    const d = document.doctype;
+    if (!d) return '';
+    return '<!DOCTYPE ' + d.name +
+      (d.publicId ? ' PUBLIC "' + d.publicId + '"' + (d.systemId ? ' "' + d.systemId + '"' : '')
+        : d.systemId ? ' SYSTEM "' + d.systemId + '"' : '') + '>';
+  }
   function takeSnapshot() {
     try {
       const body = document.body.cloneNode(true);
       body.querySelectorAll('script, noscript, style, link').forEach((n) => n.remove());
-      snap = '<!doctype html><html><head><meta charset="utf-8"><base href="' +
+      // charset=utf-8 against the site's own latin-1: this string is already
+      // decoded, and the blob is encoded as UTF-8 on the way back out.
+      snap = docType() + '<html><head><meta charset="utf-8"><base href="' +
         document.baseURI.replace(/"/g, '&quot;') + '">' + SNAP_CSS + '</head>' +
         body.outerHTML + '</html>';
     } catch (e) { snap = null; }

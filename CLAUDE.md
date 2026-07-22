@@ -118,14 +118,22 @@ comparison a feature rather than a second browser window with the extension swit
   before the attribute stripping, so the body keeps the `bgcolor` and link colours it was drawn
   with. Held as a string for the session (~900 KB on I.1) and read by `PR.reskin.snapshot()`.
   `<script>` comes out of the clone: the book has none, but the dev harness loads the whole `src/`
-  chain from `<body>`, and a `srcdoc` frame is same-origin — left in, the snapshot reskinned itself
+  chain from `<body>`, and the frame is same-origin — left in, the snapshot reskinned itself
   inside its own window. `<base href>` is `document.baseURI`, not `location.href`, so the harness's
-  own `<base>` keeps resolving the figures.
+  own `<base>` keeps resolving the figures — and it is load-bearing, not belt-and-braces, since a
+  `blob:` document has no useful base of its own. The page's **own doctype** leads the snapshot,
+  verbatim: it is what puts the book in quirks mode, so a tidy `<!doctype html>` would describe a
+  page the browser has never laid out.
 
 `inspect.js` is then one `closest('[data-pr-o]')` and one `querySelector`. It arms from a topbar
 icon (`html.pr-inspect` gives the reader a crosshair and suppresses selection, which also keeps
 `tools.js`'s highlight popover out of the way), draws a hairline above the block under the pointer,
-and on click renders the snapshot into an `<iframe srcdoc>` scrolled to the match. The picker
+and on click renders the snapshot into an iframe scrolled to the match — loaded from a **`blob:`
+URL, not `srcdoc`**, because an iframe srcdoc document never enters quirks mode (the parser skips
+the doctype's mode-setting step for it), which would have laid the book out under rules it has
+never once been laid out under. The blob inherits the page's origin, so `contentDocument` stays
+reachable for the marker; if it ever isn't, `onFrameLoad` falls back to `srcdoc` once, since the
+wrong rendering mode beats a dead window. The picker
 **stays armed** while the window is open and later picks only move the marker — never re-render —
 so shrinking the window to one half turns the reader into a walkable comparison. A target with no
 shape worth flashing (that 12×12 dot, an empty `<a name>`) grows to the first ancestor that has
@@ -273,13 +281,17 @@ memory, `reskin-testing`):
   `curl -s http://physiologie.cc/<page> > .test/<page>`.
 - `python3 dev/mkharness.py .test/<page> dev/harness_<x>.html` inlines the body and loads the real
   `src/*` chain (with an mtime cache-buster). Drive with the Playwright MCP.
-- **The book runs in quirks mode**, and the harness carries the page's own doctype so it does too.
-  `<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">` has no system identifier, which
-  makes every page `BackCompat` (I.1's doctype is worse still — its *name* is `doctype`, not
-  `html`). The consequence that bites: `document.documentElement.clientHeight` is the height of the
-  **document**, not the viewport (10 616px on X.1). Measure the viewport off
-  `document.scrollingElement` — `<body>` in quirks, `<html>` in standards, the viewport in both.
-  The harness used to emit a clean `<!doctype html>`, which hid this class of bug entirely.
+- **The book runs in quirks mode** — every page, in all three of the doctypes it uses
+  (`-//IETF//DTD HTML//EN`; HTML 4.0 Transitional with no system identifier; and the same again
+  where the authoring tool wrote the doctype's *name* as `doctype` rather than `html`). The
+  consequence that bites: `document.documentElement.clientHeight` is the height of the **document**,
+  not the viewport (10 616px on X.1). Measure the viewport off `document.scrollingElement` —
+  `<body>` in quirks, `<html>` in standards, the viewport in both. `mkharness.py` now carries the
+  source page's own doctype; it used to emit a clean `<!doctype html>`, which put the harness in
+  standards mode and hid this class of bug entirely.
+- Editing `mkharness.py` changes the harness HTML, which — unlike the `src/*` it loads — has no
+  cache-buster. Append `?cb=<anything>` when a rebuilt harness seems not to have changed; a stale
+  copy once reported the wrong document mode for a whole page and sent a diagnosis off a cliff.
 - Representative spread: I.0 (callout-heavy), I.1 (densest, ~825 KB), VIII.2, Einheiten (tables),
   I.htm (hub), Pruef.htm (TOC), home.
 - The harness stubs `chrome.storage.local` over `localStorage` (`pr.harness.*`) and
