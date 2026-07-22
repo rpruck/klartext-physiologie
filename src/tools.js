@@ -433,6 +433,53 @@
   }
   function focusNote(id) { const n = q('.note[data-id="' + id + '"] textarea'); if (n) n.focus(); }
 
+  /* ── glossary hover card ─────────────────────────────────────────────────
+     reskin.js marks every word the author badged as "defined in this page's
+     Begriffe list" with a.pr-term[data-def]. One card is mounted and moved
+     around rather than one per term — there can be 20+ on a page. It lives in
+     the light DOM (inside the reader) so it inherits the theme tokens, and is
+     position:fixed so a table's overflow can't clip it. */
+  let tip = null, tipTimer = null, tipFor = null;
+  const TIP_GAP = 10;
+  function hideTip() { clearTimeout(tipTimer); tipFor = null; if (tip) tip.classList.remove('show'); }
+  function showTip(a) {
+    const reader = document.getElementById('pr-reader');
+    if (!reader) return;
+    if (!tip) { tip = document.createElement('div'); tip.className = 'pr-tip'; reader.appendChild(tip); }
+    tipFor = a;
+    tip.innerHTML = '';
+    // data-term, not the link text: the source sometimes splits a word across
+    // spans ("B|iomembranen"), which marks the term as two adjacent links.
+    const term = document.createElement('b'); term.textContent = a.dataset.term || a.textContent.trim();
+    tip.append(term, document.createTextNode(a.dataset.def));
+    // measure first, then place: above the word if there is room, else below,
+    // and always clamped into the viewport.
+    tip.style.left = '0px'; tip.style.top = '0px';
+    const r = a.getBoundingClientRect(), t = tip.getBoundingClientRect();
+    const above = r.top > t.height + TIP_GAP;
+    tip.style.top = (above ? r.top - t.height - TIP_GAP : r.bottom + TIP_GAP) + 'px';
+    tip.style.left = Math.max(8, Math.min(window.innerWidth - t.width - 8, r.left)) + 'px';
+    tip.classList.add('show');
+  }
+  function wireTips(reader) {
+    const enter = (e) => {
+      const a = e.target.closest && e.target.closest('a.pr-term[data-def]');
+      if (!a || a === tipFor) return;
+      clearTimeout(tipTimer);
+      tipTimer = setTimeout(() => showTip(a), 120);
+    };
+    const leave = (e) => {
+      const a = e.target.closest && e.target.closest('a.pr-term[data-def]');
+      if (a && a === tipFor) hideTip();
+      else if (a) clearTimeout(tipTimer);
+    };
+    reader.addEventListener('mouseover', enter);
+    reader.addEventListener('mouseout', leave);
+    reader.addEventListener('focusin', enter);
+    reader.addEventListener('focusout', leave);
+    window.addEventListener('scroll', hideTip, { passive: true });
+  }
+
   // ── init / restore ───────────────────────────────────────────────────────
   function init() {
     wireLightbox();
@@ -450,6 +497,7 @@
         e.preventDefault(); openCtx(e.clientX, e.clientY, m.dataset.hid);
       });
       reader.addEventListener('dblclick', (e) => { const m = e.target.closest('mark.hl.has-note'); if (m) focusNote(m.dataset.hid); });
+      wireTips(reader);
     }
     // popover: choose a colour / add note
     qa('#hlPop .sw').forEach((sw) => sw.onclick = () => { if (pending) commitHighlight(sw.dataset.color); hidePop(); window.getSelection().removeAllRanges(); });
@@ -457,7 +505,7 @@
     if (act) act.onclick = () => { const h = pending ? commitHighlight('teal') : null; hidePop(); window.getSelection().removeAllRanges(); if (h) addOrEditNote(h.id); };
     // dismissers (shadow clicks retarget to the host at document level)
     document.addEventListener('mousedown', (e) => { const inUI = e.target === PR.ui.host; if (!inUI) { hidePop(); closeCtx(); } });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hidePop(); closeCtx(); closeLightbox(); } });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hidePop(); closeCtx(); closeLightbox(); hideTip(); } });
     // keep notes aligned to their marks as the page scrolls / resizes;
     // re-clamp floating pins into view when the window resizes
     const relayout = () => { cancelAnimationFrame(notesRaf); notesRaf = requestAnimationFrame(layoutNotes); };

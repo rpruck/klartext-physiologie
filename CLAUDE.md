@@ -21,12 +21,39 @@ reference, never a description of what ships.
 
 `src/reskin.js` linearizes the page into an ordered token stream (inline runs stay inline; only
 standalone lines can become headings), assembles a **semantic block model** (headings ranked from the
-*original* computed font sizes, paragraphs, definition/glossary lists, figures with captions, data
-tables, IMPP/box callouts), and emits clean HTML into a fresh `<main id="pr-reader">`. In-page
-`<a name>`/`id` anchors are preserved as zero-width spans so intra-page links keep resolving. The
-image-only landing page gets a bespoke hero (`renderHome()`).
+*original* computed font sizes, paragraphs, definition/glossary lists, lists, figures with captions,
+data tables, IMPP/box/labelled callouts), and emits clean HTML into a fresh `<main id="pr-reader">`.
+In-page `<a name>`/`id` anchors are preserved as zero-width spans so intra-page links keep resolving.
+The image-only landing page gets a bespoke hero (`renderHome()`).
 
 Entry points: `PR.reskin.isHome() ? PR.reskin.renderHome() : PR.reskin.reflow()`.
+
+### Structure the author drew instead of wrote
+
+A lot of this book's semantics is *pictures of words and glyphs*, which the deco heuristics used to
+throw away wholesale. Three families are read back out (`LABELS`, `GLOSS_BADGE`, `isBulletSize` in
+`reskin.js`):
+
+- **Section labels** — `Histor.jpg` "Historisches", `PHARM.jpg`, `DEF_kl.jpg`, `merke2.jpg`,
+  `Etym.jpg`, `exkurs.jpg`, `Anw.jpg` ("Praktische Aspekte" — the wording every link to its `#PrA`
+  anchor uses), `Orientierung.jpg`. Three shapes: `wrap` (the picture opens a
+  `<div style="margin-left:40px">` that *is* the digression → `<aside class="pr-callout">` around the
+  whole container), `lead` (heads a line → labels the block that follows), `banner` (a standalone
+  wordmark → an `<h2>`). Labels render as `<p class="pr-label">`, never a heading — `mountCrumb()`
+  finds the page title by scanning for the first `H1|H2|H3` and a label heading would hijack it.
+  `FKH.jpg` ("FEEDBACK", a footer mailto banner) and `vitru.jpg` (a separator glyph) stay deco.
+- **Glossary badges** — `Begriff.jpg` trails a word the page's Begriffe list defines. `buildGlossary`
+  indexes that list (always `#BEG`, always local), `matchTerm` maps the inflected word back to its
+  entry on a normalised shared prefix (Pleuraspalt → Pleura, teleologisch → Teleologie), and
+  `renderRuns` wraps it as `a.pr-term[data-def]`; `tools.js` hangs a hover card off that. A word with
+  no entry still gets the dashed rule, just no card.
+- **Image bullets** — small glyphs (spheres, asterisks, arrows) at the head of a line become
+  `<ul class="pr-list" data-bullet="arrow|dot">`. A list of one is handed back to the prose, since an
+  isolated marker is usually the 12×12 dot in front of an "Abbildung: …" caption.
+
+A table whose rows all hold **one** cell is a titled box, not a data grid (`classifyTable`): row 1
+becomes `.pr-box-title` + `.pr-box-sub` (split where the source drops the font size for its source
+line), the rest goes through the normal block pipeline so its bulleted lines become a real list.
 
 ### Where-am-I (chapter / section)
 
@@ -61,7 +88,7 @@ Key files:
 | `src/content.css` | Light-DOM reader styles; every rule gated `html.pr-on` and scoped to `#pr-reader` |
 | `src/settings.js` | Einstellungen panel state; `apply()` writes CSS vars on `:root` + `data-*` on `<html>` |
 | `src/ui.js` / `src/ui.css` | Injected chrome in **one Shadow DOM** (host on `<html>`); `ui.css` fetched via `chrome.runtime.getURL` |
-| `src/tools.js` | Study interactions (highlight / notes / pins / lightbox) |
+| `src/tools.js` | Study interactions (highlight / notes / pins / lightbox / glossary hover card) |
 | `src/anchor.js` | Self-healing annotation anchoring — the biggest correctness surface |
 | `src/store.js` | `chrome.storage.local` wrapper + a tiny synchronous localStorage mirror for `boot.js` |
 | `src/visited.js` | Records pages read (storage key `visited`) and tags links to them `.pr-seen`; off (record and all) when the `progress` setting is false, which content.css also gates the markers on via `html.pr-on[data-progress="1"]` |

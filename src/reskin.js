@@ -55,6 +55,36 @@
     'column.gif', 'smile1.jpeg', 'openacc.jpg', 'lstrc_archivelogo.png', 'merke.jpg', 'merke2.jpg',
     'pharm.jpg', 'histor.jpg', 'fkh.jpg', 'anw.jpg', 'orientierung.jpg', 'etym.jpg', 'vitru.jpg',
     'life_has_meaning.jpg', 'dt_real.jpg', 'ohne_physio.jpeg', 'ohne_physio.jpg']);
+
+  /* ── section labels ─────────────────────────────────────────────────────
+     The author sets his section markers as pictures of words — a blackletter
+     "Historisches", a "DEFINITION" plate, a "Merke:" stick figure. They carry
+     structure nothing else on the page states (where a digression begins, what
+     kind it is), so read the word back out instead of dropping the image with
+     the rest of the deco. Wording is transcribed from the images themselves.
+       wrap    the picture opens a container (a margin-left div) that IS the block
+       lead    the picture heads a line; the label belongs to what follows
+       banner  a standalone wordmark that acts as a section heading
+     Anw.jpg reads "Klinik · Alltag · Praxis · Anwendung", but every link that
+     points at its anchor calls the section "Praktische Aspekte" — use the
+     book's own words for it. FKH.jpg ("FEEDBACK") sits inside a mailto: in the
+     footer and vitru.jpg is a bullet glyph, not a label; both stay deco. */
+  const LABELS = {
+    'histor.jpg': { text: 'Historisches', kind: 'wrap' },
+    'pharm.jpg': { text: 'Pharmakologie', kind: 'wrap' },
+    'begriffe.jpg': { text: 'Begriffe', kind: 'lead' },
+    'def_kl.jpg': { text: 'Definition', kind: 'lead' },
+    'merke.jpg': { text: 'Merke', kind: 'lead' },
+    'merke2.jpg': { text: 'Merke', kind: 'lead' },
+    'etym.jpg': { text: 'Etymologie', kind: 'lead' },
+    'exkurs.jpg': { text: 'Exkurs', kind: 'lead' },
+    'anw.jpg': { text: 'Praktische Aspekte', kind: 'banner' },
+    'orientierung.jpg': { text: 'Orientierung', kind: 'banner' },
+  };
+  const labelOf = (f) => LABELS[f] || null;
+  // The badge that marks a word as defined in this page's Begriffe list. It
+  // always points at the page's own #BEG, so the definitions are local.
+  const GLOSS_BADGE = 'begriff.jpg';
   // NB: no /^hhs/ prefix — that hid the author portrait under Strategy A.
   const DECO_PREFIX = /^(reise|welcome|dilbert|smiley|aeskulap|saeule|spruch)/i;
   const isDecoName = (f) => { f = f.toLowerCase(); return DECO.has(f) || DECO_PREFIX.test(f); };
@@ -187,6 +217,35 @@
     return { kind: 'deco' };
   }
 
+  /* A 'wrap' label opens a container that is exactly the digression — always a
+     <div style="margin-left:40px"> with the picture as its first child. The
+     container is what gives us the EXTENT, which the label alone can't state.
+     Only the image's own innermost block ancestor counts, or the outer wrappers
+     it happens to open would each nest another callout around the same text. */
+  function wrapLabel(el) {
+    const im = el.querySelector('img');
+    if (!im) return null;
+    const lab = labelOf(base(im.getAttribute('src')).toLowerCase());
+    if (!lab || lab.kind !== 'wrap') return null;
+    let p = im.parentElement;
+    while (p && INLINE.has(p.tagName)) p = p.parentElement;
+    if (p !== el) return null;
+    const r = document.createRange();
+    r.setStart(el, 0); r.setEndBefore(im);
+    if (norm(r.toString())) return null;          // must OPEN the container
+    const len = norm(el.textContent).length;
+    return (len >= 60 && len <= 6000) ? lab : null;
+  }
+
+  /* Bullets are pictures too: spheres, asterisks, arrows, all set at the head
+     of a line with a hard space after them. Size is what separates a bullet
+     glyph from a small figure; position is what separates it from the badges
+     that trail a word. The one shape this would also catch is the 12×12
+     marker in front of "Abbildung: …" captions — assemble() rejects those on
+     the caption wording instead. */
+  const isBulletSize = (w, h) => w && h && Math.min(w, h) >= 8 && Math.max(w, h) <= 60;
+  const ARROW_BULLET = /(pfeil|arrow)/i;
+
   /* ── table taxonomy ─────────────────────────────────────────────────── */
   function parseColor(s) {
     if (!s) return null; s = s.trim().toLowerCase();
@@ -198,6 +257,9 @@
     const m = s.match(/\d+/g);
     return m && m.length >= 3 ? { r: +m[0], g: +m[1], b: +m[2] } : null;
   }
+  // A table's OWN rows/cells — never a nested table's.
+  const boxRows = (t) => [...t.querySelectorAll(':scope > tbody > tr, :scope > tr')];
+  const rowCells = (r) => [...r.querySelectorAll(':scope > td, :scope > th')];
   const cellBg = (c) => parseColor(c.getAttribute && c.getAttribute('bgcolor')) || parseColor(c.style && c.style.backgroundColor);
   const isYellowish = (p) => p && p.r >= 248 && p.g >= 235 && p.b < p.g && (p.r - p.b) >= 6;
   const isBluish = (p) => p && p.b >= 110 && p.r < 90 && p.g < 90;
@@ -215,8 +277,10 @@
     const cells = [...t.querySelectorAll('td, th')];
     const anyBlue = cells.some((c) => isBluish(cellBg(c)));
     const anyColored = cells.some((c) => isColored(cellBg(c))) || isColored(cellBg(t));
-    const directCells = [...t.querySelectorAll(':scope > tbody > tr > td, :scope > tr > td')];
-    const singleCell = directCells.length <= 1;
+    // One column is a titled box, not a grid — the site paints "Prinzipien in
+    // der Physiologie" as a 2-row/1-column table (title cell, then the bulleted
+    // body). Read as data it collapsed into two run-on rows.
+    const singleCell = boxRows(t).every((r) => rowCells(r).length <= 1);
     if (singleCell && anyColored) {
       const yellow = cells.some((c) => isYellowish(cellBg(c))) || isYellowish(cellBg(t));
       return yellow ? 'impp' : 'box';
@@ -228,6 +292,17 @@
   /* ══ token stream ══════════════════════════════════════════════════════ */
   function tokenize(root, counts, baseline) {
     const toks = [];
+    // nothing but whitespace since the last line break
+    function atLineStart() {
+      for (let i = toks.length - 1; i >= 0; i--) {
+        const t = toks[i];
+        if (t.k === 'br' || t.k === 'block') return true;
+        if (t.k === 'text' && !t.text.trim()) continue;
+        if (t.k === 'anchor') continue;
+        return false;
+      }
+      return true;
+    }
     function walk(node, st) {
       for (const n of node.childNodes) {
         if (n.nodeType === 3) {
@@ -260,9 +335,16 @@
           }
         }
         if (tag === 'IMG') {
+          const f = base(n.getAttribute('src')).toLowerCase();
+          const lab = labelOf(f);
+          // 'wrap' labels are consumed by their container below; the picture
+          // itself has nothing left to say once the word is out.
+          if (lab && lab.kind !== 'wrap') { toks.push({ k: 'label', text: lab.text, banner: lab.kind === 'banner' }); continue; }
+          if (f === GLOSS_BADGE) { toks.push({ k: 'gloss' }); continue; }
           const c = classifyImg(n, counts);
           if (c.kind === 'fig') toks.push({ k: 'fig', ...c });
           else if (c.kind === 'nav') toks.push({ k: 'nav', href: c.href, label: c.label });
+          else if (c.kind === 'deco' && atLineStart() && isBulletSize(...imgSize(n))) toks.push({ k: 'bullet', src: f });
           continue;
         }
         if (tag === 'TABLE') {
@@ -286,7 +368,10 @@
           continue;
         }
         toks.push({ k: 'block' });
+        const wrap = wrapLabel(n);
+        if (wrap) toks.push({ k: 'label', text: wrap.text, wrap: 'open' });
         walk(n, st);
+        if (wrap) toks.push({ k: 'label', wrap: 'close' });
         toks.push({ k: 'block' });
       }
     }
@@ -311,6 +396,14 @@
 
   /* ══ assemble blocks ═══════════════════════════════════════════════════ */
   const GLOSS = /^[A-ZÄÖÜ][^:]{0,30}:\s+\S/;
+  // Inside the page's Begriffe list the label already says these lines are
+  // entries, so the shape alone is enough — no need for the capital and the
+  // short term the loose-in-prose rule above needs to stay honest ("eosinophil:
+  // …", "Hodgkin-Huxley-Gleichungen zum Membranpotential: …").
+  const GLOSS_LOOSE = /^[^:]{1,60}:\s+\S/;
+  // "Abbildung: …" / "Nach …" — a caption, both when it trails a figure and
+  // when the 12×12 marker in front of it looks like a bullet.
+  const CAP = /^\s*(Abbildung|Abb\.|Abb\b|Nach\s|Fig\.|©)/;
 
   function assemble(toks, baseline) {
     const lines = [];
@@ -319,8 +412,10 @@
     for (const t of toks) {
       if (t.k === 'text') cur.push({ text: t.text, st: t.st });
       else if (t.k === 'anchor') cur.push({ text: '', anchor: t.id });
+      else if (t.k === 'bullet') cur.push({ text: '', bullet: t.src });
+      else if (t.k === 'gloss') cur.push({ text: '', gloss: true });
       else if (t.k === 'br' || t.k === 'block') flush();
-      else if (t.k === 'fig' || t.k === 'nav' || t.k === 'table') { flush(); lines.push({ special: t }); }
+      else if (t.k === 'fig' || t.k === 'nav' || t.k === 'table' || t.k === 'label') { flush(); lines.push({ special: t }); }
       else if (t.k === 'hr') { flush(); lines.push({ special: { k: 'hr' } }); }
     }
     flush();
@@ -329,6 +424,14 @@
     const lineMaxSize = (l) => l.runs.reduce((m, r) => Math.max(m, r.st && r.st.size || baseline), 0);
     const lineBold = (l) => { const p = l.runs.filter((r) => r.text.trim()); return p.length && p.every((r) => r.st && r.st.b); };
     const lineAnchors = (l) => (l.runs || []).filter((r) => r.anchor).map((r) => r.anchor);
+    // a bullet only counts when it OPENS the line — trailing glyphs are badges
+    const lineBullet = (l) => {
+      for (const r of (l.runs || [])) {
+        if (r.bullet) return r.bullet;
+        if ((r.text || '').trim()) return null;
+      }
+      return null;
+    };
     const lineLinked = (l) => { const p = (l.runs || []).filter((r) => (r.text || '').trim()); return p.length > 0 && p.every((r) => r.st && r.st.href); };
     const isGloss = (l) => l.runs && GLOSS.test(lineText(l)) && lineText(l).length <= 200;
     const glossFlag = lines.map((l) => !l.special && isGloss(l));
@@ -353,10 +456,13 @@
     }
 
     const blocks = [];
-    let para = null, deflist = null, pending = [];
+    let para = null, deflist = null, pending = [], label = null, inGloss = false;
     const drain = () => { const a = pending; pending = []; return a; };
-    const flushPara = () => { if (para && norm(para.runs.map((r) => r.text).join(''))) blocks.push({ t: 'p', runs: para.runs, anchors: para.anchors }); para = null; };
-    const flushDef = () => { if (deflist && deflist.items.length) blocks.push({ t: 'deflist', items: deflist.items, anchors: deflist.anchors }); deflist = null; };
+    // A 'lead' label belongs to the block that FOLLOWS it, so it is claimed
+    // when that block starts — not when it is flushed, which can be much later.
+    const takeLabel = () => { const l = label; label = null; return l; };
+    const flushPara = () => { if (para && norm(para.runs.map((r) => r.text).join(''))) blocks.push({ t: 'p', runs: para.runs, anchors: para.anchors, bullet: para.bullet, label: para.label }); para = null; };
+    const flushDef = () => { if (deflist && deflist.items.length) blocks.push({ t: 'deflist', items: deflist.items, anchors: deflist.anchors, label: deflist.label }); deflist = null; };
     const flushGroups = () => { flushPara(); flushDef(); };
 
     for (let i = 0; i < lines.length; i++) {
@@ -368,6 +474,18 @@
         else if (s.k === 'nav') blocks.push({ t: 'nav', href: s.href, label: s.label, dir: s.dir, anchors });
         else if (s.k === 'hr') blocks.push({ t: 'hr', anchors });
         else if (s.k === 'table') blocks.push({ t: 'table', kind: s.kind, el: s.el, anchors });
+        else if (s.k === 'label') {
+          // A label emits no block of its own (the callout it opens, or the
+          // block it prefixes, does) — hand the anchors it drained back so the
+          // in-page links they carry land on real content.
+          if (s.wrap === 'open') blocks.push({ t: 'open', label: s.text, anchors });
+          else if (s.banner) blocks.push({ t: 'h', level: 2, runs: [{ text: s.text, st: {} }], anchors });
+          else {
+            if (s.wrap) blocks.push({ t: 'close' });
+            else { label = s.text; if (s.text === 'Begriffe') inGloss = true; }
+            pending.push(...anchors);
+          }
+        }
         continue;
       }
       const txt = lineText(l), anchors = lineAnchors(l);
@@ -376,16 +494,25 @@
         else flushGroups();
         continue;
       }
-      if (glossFlag[i] && (glossFlag[i - 1] || glossFlag[i + 1])) {
+      // A bullet line always starts a fresh item; wrapped continuation lines
+      // then fall into it like any other paragraph. "Abbildung: …" is a caption
+      // whose marker only looks like a bullet — never a one-item list.
+      const bullet = lineBullet(l);
+      if (bullet && !CAP.test(txt)) { flushGroups(); para = { runs: [], anchors: drain(), bullet, label: takeLabel() }; }
+
+      const isEntry = (glossFlag[i] && (glossFlag[i - 1] || glossFlag[i + 1])) ||
+        (inGloss && GLOSS_LOOSE.test(txt) && txt.length <= 300);
+      if (!bullet && isEntry) {
         flushPara();
-        if (!deflist) deflist = { items: [], anchors: drain() };
+        if (!deflist) deflist = { items: [], anchors: drain(), label: takeLabel() };
         deflist.items.push({ runs: l.runs });
         continue;
       }
+      inGloss = false;   // the first line that isn't an entry ends the list
       flushDef();
-      const lvl = headingLevel(l);
-      if (lvl) { flushPara(); blocks.push({ t: 'h', level: lvl, runs: l.runs, anchors: drain() }); continue; }
-      if (!para) para = { runs: [], anchors: drain() };
+      const lvl = bullet ? 0 : headingLevel(l);
+      if (lvl) { flushPara(); blocks.push({ t: 'h', level: lvl, runs: l.runs, anchors: drain(), label: takeLabel() }); continue; }
+      if (!para) para = { runs: [], anchors: drain(), label: takeLabel() };
       if (para.runs.length) para.runs.push({ text: ' ', st: {} });
       para.runs.push(...l.runs);
     }
@@ -404,7 +531,7 @@
     // and a 16-entry index runs past the bottom of the viewport, so tag runs of
     // them for renderBlocks to gather into one tight list.
     const isLinkOnly = (b) => {
-      if (b.t !== 'p') return false;
+      if (b.t !== 'p' || b.bullet) return false;
       const words = b.runs.filter((r) => (r.text || '').trim());
       return words.length > 0 && words.every((r) => r.st && r.st.href) &&
         norm(b.runs.map((r) => r.text).join('')).length <= 120;
@@ -417,7 +544,6 @@
     }
 
     // attach "Abbildung/Nach/©" caption paragraphs to the figure above.
-    const CAP = /^\s*(Abbildung|Abb\.|Abb\b|Nach\s|Fig\.|©)/;
     for (let i = 0; i < blocks.length; i++) {
       if (blocks[i].t !== 'fig') continue;
       const nxt = blocks[i + 1];
@@ -429,11 +555,111 @@
     return blocks;
   }
 
+  /* ══ glossary ══════════════════════════════════════════════════════════
+     Every page carries one "Begriffe" list (anchor #BEG) and sprinkles a small
+     green badge behind words it defines there. The badge trails the word, and
+     the word is rarely the entry verbatim — the text inflects it (Pleuraspalt →
+     Pleura, teleologisch → Teleologie, Phrenikusnerven → Phrenikusnerv), so
+     match on a normalised shared prefix over the last few words, longest window
+     first. No entry found (Pinozytose, "Thrifty genes") still marks the word and
+     links it to the list; it just has nothing to show on hover. */
+  let glossary = null;
+  const isGlossList = (b) => b.t === 'deflist' &&
+    (b.label === 'Begriffe' || (b.anchors || []).includes('BEG') ||
+     b.items.some((it) => it.runs.some((r) => r.anchor === 'BEG')));
+  function buildGlossary(blocks) {
+    const map = new Map();
+    for (const b of blocks) {
+      if (!isGlossList(b)) continue;
+      for (const it of b.items) {
+        const [term, def] = splitAtColon(it.runs);
+        const t = norm(term.map((r) => r.text).join('')), d = norm(def.map((r) => r.text).join(''));
+        if (t && d) map.set(t, d);
+      }
+    }
+    return map.size ? map : null;
+  }
+  const foldTerm = (s) => s.toLowerCase().replace(/ß/g, 'ss').normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+  /* The word in the text and the entry in the list rarely agree letter for
+     letter, so score a normalised shared prefix — but it has to cover most of
+     the longer of the two, or "Diffusionsgesetz (nach Adolf Fick" matches
+     Diffusion on its first nine letters. Inflection happens inside ONE word, so
+     a multi-word window has to be the entry itself, near enough. */
+  function scoreTerm(a, b, oneWord) {
+    if (a === b) return 100;
+    const short = Math.min(a.length, b.length);
+    let p = 0; while (p < short && a[p] === b[p]) p++;
+    if (p / Math.max(a.length, b.length) < 0.4) return 0;
+    if (p === short && short >= 5) return 50 + short;   // one contains the other
+    return (oneWord && p >= 6) ? 20 + p : 0;
+  }
+  const EDGE = /^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu;
+  // → the term as it stands in the text, and its definition
+  function matchTerm(text) {
+    if (!glossary) return null;
+    const starts = [];
+    const re = /\S+/g; let m;
+    while ((m = re.exec(text))) starts.push(m.index);
+    let best = null;
+    for (let w = 1; w <= 4 && w <= starts.length; w++) {
+      // a window can open on a bracket ("(Clathrin-Mechanismus") — punctuation
+      // around the term, not part of it
+      const cand = text.slice(starts[starts.length - w]).replace(EDGE, '');
+      const nc = foldTerm(cand);
+      if (nc.length < 2) continue;
+      glossary.forEach((def, term) => {
+        const s = scoreTerm(nc, foldTerm(term), w === 1);
+        if (s && (!best || s > best.score)) best = { score: s, text: cand, len: cand.length, def };
+      });
+    }
+    return best;
+  }
+  const TRAIL = /[^\p{L}\p{N}]+$/u;
+  function markTerm(out) {
+    let tail = '';
+    for (let i = out.length - 1; i >= 0 && tail.length < 60; i--) tail = (out[i].text || '') + tail;
+    // spaces and punctuation sit between the word and the badge that trails it
+    const trimmed = tail.replace(TRAIL, '');
+    if (!trimmed) return;
+    let skip = tail.length - trimmed.length;
+    const hit = matchTerm(trimmed);
+    // no entry → still mark the last word, so the cross-reference survives
+    const last = trimmed.slice(trimmed.lastIndexOf(' ') + 1);
+    let len = hit ? hit.len : last.length;
+    const def = hit ? hit.def : '';
+    // the whole term even where the source splits it across runs (B|iomembranen)
+    const whole = hit ? hit.text : last;
+    for (let j = out.length - 1; j >= 0 && len > 0; j--) {
+      const r = out[j], t = r.text || '';
+      if (!t) continue;
+      let end = t.length;
+      if (skip) { const cut = Math.min(skip, end); end -= cut; skip -= cut; if (!end) continue; }
+      const take = Math.min(len, end);
+      const from = end - take;
+      len -= take;
+      const parts = [];
+      const mid = t.slice(from, end);
+      if (from) parts.push(Object.assign({}, r, { text: t.slice(0, from) }));
+      // a two-word term can straddle runs; the space between them is not a term
+      parts.push(mid.trim() ? Object.assign({}, r, { text: mid, st: Object.assign({}, r.st, { term: def, whole }) })
+        : Object.assign({}, r, { text: mid }));
+      if (end < t.length) parts.push(Object.assign({}, r, { text: t.slice(end) }));
+      out.splice(j, 1, ...parts);
+    }
+  }
+  function resolveGloss(runs) {
+    if (!runs.some((r) => r.gloss)) return runs;
+    const out = [];
+    for (const r of runs) { if (r.gloss) markTerm(out); else out.push(r); }
+    return out;
+  }
+
   /* ══ render ════════════════════════════════════════════════════════════ */
   const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   function renderRuns(runs) {
     let html = '';
-    for (const r of runs) {
+    for (const r of resolveGloss(runs)) {
       if (r.anchor) html += '<span class="pr-anchor" id="' + esc(r.anchor) + '"></span>';
       let t = esc(r.text || '');
       if (!t) continue;
@@ -443,7 +669,10 @@
       if (st.b && st.i) t = '<strong><em>' + t + '</em></strong>';
       else if (st.b) t = '<strong>' + t + '</strong>';
       else if (st.i) t = '<em>' + t + '</em>';
-      if (st.href) t = '<a href="' + esc(st.href) + '">' + t + '</a>';
+      if (st.term !== undefined) {
+        t = '<a class="pr-term" href="' + esc(st.href || '#BEG') + '"' +
+          (st.term ? ' data-term="' + esc(st.whole || '') + '" data-def="' + esc(st.term) + '"' : '') + '>' + t + '</a>';
+      } else if (st.href) t = '<a href="' + esc(st.href) + '">' + t + '</a>';
       html += t;
     }
     return html.replace(/\s+/g, ' ');
@@ -491,8 +720,38 @@
     }
     const wrap = document.createElement(kind === 'impp' ? 'aside' : 'div');
     wrap.className = kind === 'impp' ? 'pr-impp' : 'pr-box';
-    wrap.appendChild(renderBlocks(assemble(tokenize(el, counts, baseline), baseline), counts, baseline));
+    const blocksOf = (node) => renderBlocks(assemble(tokenize(node, counts, baseline), baseline), counts, baseline);
+    // A stack of one-cell rows is a titled box: row 1 names it, the rest is the
+    // body. Rendered as one lump, the title ran straight into its source line
+    // and the body's bulleted lines into one paragraph.
+    const cells = boxRows(el).map((r) => rowCells(r)[0]).filter(Boolean);
+    if (cells.length >= 2) {
+      wrap.appendChild(boxHead(cells[0], counts, baseline));
+      cells.slice(1).forEach((c) => wrap.appendChild(blocksOf(c)));
+    } else wrap.appendChild(blocksOf(el));
     return wrap;
+  }
+  /* The title cell holds the name and, set smaller, where it came from ("Nach
+     Feher J, Quantitative Human Physiology…"). That size drop is the only thing
+     separating them, so split on it. */
+  function boxHead(cell, counts, baseline) {
+    const frag = document.createDocumentFragment();
+    const b = assemble(tokenize(cell, counts, baseline), baseline).find((x) => x.t === 'p' || x.t === 'h');
+    if (!b) return frag;
+    const words = b.runs.filter((r) => (r.text || '').trim());
+    const max = words.reduce((m, r) => Math.max(m, (r.st && r.st.size) || 0), 0);
+    const cut = max ? b.runs.findIndex((r) => (r.text || '').trim() && ((r.st && r.st.size) || max) <= max - 1.5) : -1;
+    const title = document.createElement('p');
+    title.className = 'pr-box-title';
+    title.innerHTML = renderRuns(cut < 0 ? b.runs : b.runs.slice(0, cut));
+    frag.appendChild(title);
+    if (cut >= 0) {
+      const sub = document.createElement('p');
+      sub.className = 'pr-box-sub';
+      sub.innerHTML = renderRuns(b.runs.slice(cut));
+      frag.appendChild(sub);
+    }
+    return frag;
   }
   function emitAnchors(frag, ids, seen) {
     for (const id of ids || []) { if (!id || seen.has(id)) continue; seen.add(id); const s = document.createElement('span'); s.className = 'pr-anchor'; s.id = id; frag.appendChild(s); }
@@ -500,15 +759,31 @@
   // Direction is only ever encoded in the label's arrow (navLabel bakes it in).
   const navRank = (label) => (/^\s*‹/.test(label) ? 0 : /›\s*$/.test(label) ? 2 : 1);
 
+  const labelEl = (text) => { const p = document.createElement('p'); p.className = 'pr-label'; p.textContent = text; return p; };
+  const bulletKind = (src) => (ARROW_BULLET.test(src) ? 'arrow' : 'dot');
+
   function renderBlocks(blocks, counts, baseline, seen) {
     seen = seen || new Set();
     const frag = document.createDocumentFragment();
-    let navGroup = null, linkList = null;
+    // Callouts nest: 'open'/'close' pairs move where the following blocks land.
+    const stack = [];
+    let into = frag, navGroup = null, linkList = null, list = null, listOf = null;
     for (const b of blocks) {
+      if (b.t === 'open') {
+        emitAnchors(into, b.anchors, seen);
+        const box = document.createElement('aside');
+        box.className = 'pr-callout';
+        box.appendChild(labelEl(b.label));
+        into.appendChild(box);
+        stack.push(into); into = box;
+        navGroup = linkList = list = null;
+        continue;
+      }
+      if (b.t === 'close') { if (stack.length) into = stack.pop(); navGroup = linkList = list = null; continue; }
       if (b.t === 'nav') {
-        linkList = null;
-        emitAnchors(frag, b.anchors, seen);
-        if (!navGroup) { navGroup = document.createElement('nav'); navGroup.className = 'pr-navrow'; frag.appendChild(navGroup); }
+        linkList = list = null;
+        emitAnchors(into, b.anchors, seen);
+        if (!navGroup) { navGroup = document.createElement('nav'); navGroup.className = 'pr-navrow'; into.appendChild(navGroup); }
         const a = document.createElement('a'); a.className = 'pr-nav'; a.href = b.href; a.textContent = b.label;
         // The source usually paints "Weiter" left of "Zurück"; sort into pager
         // order instead (back · everything else · forward), stably.
@@ -518,20 +793,50 @@
       }
       navGroup = null;
       if (b.t === 'p' && b.linkitem) {
-        emitAnchors(frag, b.anchors, seen);
-        if (!linkList) { linkList = document.createElement('nav'); linkList.className = 'pr-linklist'; frag.appendChild(linkList); }
+        list = null;
+        emitAnchors(into, b.anchors, seen);
+        if (!linkList) { linkList = document.createElement('nav'); linkList.className = 'pr-linklist'; into.appendChild(linkList); }
         const p = document.createElement('p'); p.innerHTML = renderRuns(b.runs); linkList.appendChild(p);
         continue;
       }
       linkList = null;
-      emitAnchors(frag, b.anchors, seen);
-      if (b.t === 'h') { const h = document.createElement('h' + b.level); h.innerHTML = renderRuns(b.runs); frag.appendChild(h); }
-      else if (b.t === 'p') { const p = document.createElement('p'); p.innerHTML = renderRuns(b.runs); if (norm(p.textContent) || p.querySelector('[id]')) frag.appendChild(p); }
-      else if (b.t === 'hr') frag.appendChild(document.createElement('hr'));
+      // Runs of bullet paragraphs are one list — but only while the glyph stays
+      // the same, since a new glyph starts a new list in the source too.
+      if (b.t === 'p' && b.bullet) {
+        emitAnchors(into, b.anchors, seen);
+        const kind = bulletKind(b.bullet);
+        if (!list || listOf !== kind) {
+          list = document.createElement('ul'); list.className = 'pr-list'; list.dataset.bullet = kind;
+          listOf = kind; into.appendChild(list);
+        }
+        const li = document.createElement('li'); li.innerHTML = renderRuns(b.runs); list.appendChild(li);
+        continue;
+      }
+      list = null;
+      emitAnchors(into, b.anchors, seen);
+      // A 'lead' label names the block that follows it; a labelled paragraph is
+      // a callout of one, a labelled heading just takes the label as its kicker.
+      let box = into;
+      if (b.label && b.t !== 'deflist') {
+        if (b.t === 'h') into.appendChild(labelEl(b.label));
+        else { box = document.createElement('aside'); box.className = 'pr-callout'; box.appendChild(labelEl(b.label)); into.appendChild(box); }
+      }
+      if (b.t === 'h') { const h = document.createElement('h' + b.level); h.innerHTML = renderRuns(b.runs); box.appendChild(h); }
+      else if (b.t === 'p') { const p = document.createElement('p'); p.innerHTML = renderRuns(b.runs); if (norm(p.textContent) || p.querySelector('[id]')) box.appendChild(p); }
+      else if (b.t === 'hr') box.appendChild(document.createElement('hr'));
       else if (b.t === 'deflist') {
         const dl = document.createElement('dl'); dl.className = 'pr-defs';
-        for (const it of b.items) { const [term, def] = splitAtColon(it.runs); const dt = document.createElement('dt'); dt.innerHTML = renderRuns(term); const dd = document.createElement('dd'); dd.innerHTML = renderRuns(def); dl.appendChild(dt); dl.appendChild(dd); }
-        frag.appendChild(dl);
+        // The source pads its entries with hard spaces and stray breaks; a
+        // definition list is a grid, so the padding only knocks it off its rails.
+        for (const it of b.items) { const [term, def] = splitAtColon(it.runs); const dt = document.createElement('dt'); dt.innerHTML = renderRuns(term).trim(); const dd = document.createElement('dd'); dd.innerHTML = renderRuns(def).trim(); dl.appendChild(dt); dl.appendChild(dd); }
+        // The page's own Begriffe list: a labelled, tightly-set glossary rather
+        // than the airy two-column definition list prose uses.
+        if (isGlossList(b)) {
+          dl.classList.add('pr-defs-tight');
+          const sec = document.createElement('section'); sec.className = 'pr-gloss';
+          sec.append(labelEl(b.label || 'Begriffe'), dl);
+          box.appendChild(sec);
+        } else box.appendChild(dl);
       }
       else if (b.t === 'fig') {
         const fig = document.createElement('figure'); fig.className = 'pr-fig';
@@ -539,12 +844,19 @@
         fitNatural(im, b.w || 0);
         fig.appendChild(im);
         if (b.cap) { const fc = document.createElement('figcaption'); fc.className = 'pr-figcap'; fc.textContent = b.cap; fig.appendChild(fc); }
-        frag.appendChild(fig);
+        box.appendChild(fig);
       }
-      else if (b.t === 'table') frag.appendChild(renderTable(b, counts, baseline));
+      else if (b.t === 'table') box.appendChild(renderTable(b, counts, baseline));
     }
     const holder = document.createElement('div');
     holder.appendChild(frag);
+    // A list of one is more often a caption marker that looked like a bullet
+    // than a list — hand those back to the prose.
+    holder.querySelectorAll(':scope ul.pr-list').forEach((ul) => {
+      if (ul.children.length !== 1) return;
+      const p = document.createElement('p'); p.innerHTML = ul.firstElementChild.innerHTML;
+      ul.replaceWith(p);
+    });
     return holder;
   }
 
@@ -656,7 +968,11 @@
     const src = document.body;
     const baseline = measureBaseline(src);
     const counts = imgCounts(src);
-    const rendered = renderBlocks(assemble(tokenize(src, counts, baseline), baseline), counts, baseline);
+    const blocks = assemble(tokenize(src, counts, baseline), baseline);
+    // Index the Begriffe list before rendering: renderRuns resolves the badges
+    // against it, wherever they sit (prose, headings, nested box tables).
+    glossary = buildGlossary(blocks);
+    const rendered = renderBlocks(blocks, counts, baseline);
     const reader = document.createElement('main');
     reader.id = 'pr-reader';
     while (rendered.firstChild) reader.appendChild(rendered.firstChild);

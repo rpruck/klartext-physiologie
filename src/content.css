@@ -299,6 +299,92 @@ html.pr-on #pr-reader dl.pr-defs {
 html.pr-on #pr-reader dl.pr-defs dt { font-weight: 600; color: var(--accent-ink); }
 html.pr-on #pr-reader dl.pr-defs dd { margin: 0; }
 
+/* The page's own Begriffe list — a reference table you scan, not prose you
+   read, so it is set tighter and smaller than a definition list in the text. */
+html.pr-on #pr-reader section.pr-gloss { margin: 1.8em 0; }
+html.pr-on #pr-reader dl.pr-defs-tight {
+  margin: 0;
+  row-gap: .12em;
+  column-gap: .9em;
+  font-size: .92em;
+  line-height: 1.45;
+}
+
+/* ── section labels (reskin.js reads them off the author's picture-words) ── */
+html.pr-on #pr-reader .pr-label {
+  font-family: var(--font-label);
+  font-size: .68rem;
+  line-height: 1.6;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--accent-ink);
+  margin: 0 0 .5em;
+}
+
+/* ── image bullets recovered as real lists (reskin.js emits ul.pr-list) ─── */
+html.pr-on #pr-reader ul.pr-list {
+  margin: 1.2em 0;
+  padding-left: 1.6em;
+  list-style: none;
+}
+html.pr-on #pr-reader ul.pr-list li { margin: 0 0 .5em; position: relative; }
+html.pr-on #pr-reader ul.pr-list li::before {
+  position: absolute;
+  left: -1.6em;
+  color: var(--accent);
+  font-family: var(--font-label);
+}
+html.pr-on #pr-reader ul.pr-list[data-bullet="dot"] li::before { content: "•"; }
+html.pr-on #pr-reader ul.pr-list[data-bullet="arrow"] li::before { content: "→"; font-size: .85em; }
+html.pr-on #pr-reader ul.pr-list > li:last-child { margin-bottom: 0; }
+
+/* ── glossary terms (the little green Begriff badge, read back as a link) ──
+   Amboss-style: a dashed rule says "there is a definition behind this word"
+   without the pull of a real link. tools.js hangs the hover card off it. */
+html.pr-on #pr-reader a.pr-term {
+  background-image: none;
+  color: inherit;
+  border-bottom: 1px dashed var(--accent-line);
+  cursor: help;
+  transition: border-color .2s var(--ease), background .2s var(--ease);
+}
+html.pr-on #pr-reader a.pr-term:hover {
+  border-bottom-style: solid;
+  border-bottom-color: var(--accent);
+  background: var(--accent-tint);
+}
+/* a term that is also a real link keeps the link colour; only the rule differs */
+html.pr-on #pr-reader a.pr-term[href]:not([href="#BEG"]) { color: var(--accent-ink); }
+
+/* the hover card (tools.js mounts one and moves it around) */
+html.pr-on #pr-reader .pr-tip {
+  position: fixed;
+  z-index: 30;
+  max-width: 28rem;
+  padding: .7em .9em;
+  border: 1px solid var(--hair);
+  border-radius: 8px;
+  background: var(--paper);
+  box-shadow: var(--shadow);
+  font-family: var(--font-note);
+  font-size: .82rem;
+  line-height: 1.5;
+  color: var(--ink);
+  text-align: left;
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity .16s var(--ease), transform .16s var(--ease);
+  pointer-events: none;
+}
+html.pr-on #pr-reader .pr-tip.show { opacity: 1; transform: none; }
+html.pr-on #pr-reader .pr-tip b {
+  display: block;
+  font-weight: 600;
+  color: var(--accent-ink);
+  margin-bottom: .15em;
+}
+
 /* ── section rule (was the ugly default <hr>) ──────────────────────────── */
 html.pr-on #pr-reader hr {
   border: 0;
@@ -405,6 +491,39 @@ html.pr-on #pr-reader .pr-box {
 }
 html.pr-on #pr-reader .pr-box > *:last-child,
 html.pr-on #pr-reader .pr-box > *:last-child > *:last-child { margin-bottom: 0; }
+
+/* a one-column table is a titled box: row 1 names it, often over a smaller
+   source line ("Nach Feher J, Quantitative Human Physiology…") */
+html.pr-on #pr-reader .pr-box-title,
+html.pr-on #pr-reader .pr-impp .pr-box-title {
+  font-weight: 600;
+  font-size: 1.02em;
+  line-height: 1.3;
+  margin: 0 0 .15em;
+  color: var(--accent-ink);
+}
+html.pr-on #pr-reader .pr-box-sub {
+  font-family: var(--font-label);
+  font-size: .72rem;
+  line-height: 1.5;
+  color: var(--ink-soft);
+  margin: 0 0 .9em;
+}
+
+/* ── labelled callouts (Historisches, Pharmakologie, Merke, Definition…) ──
+   The author's digressions are marked by a picture of a word and end wherever
+   the container ends — nothing in the text says so. A tinted card states both:
+   the label names the aside, the fill says exactly how far it runs. Tinted with
+   the accent rather than ink so it reads as a sibling of the IMPP card, not of
+   the quiet .pr-box note. */
+html.pr-on #pr-reader aside.pr-callout {
+  margin: 2em 0;
+  padding: 1.1em 1.3em;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 5%, var(--paper));
+}
+html.pr-on #pr-reader aside.pr-callout > *:last-child,
+html.pr-on #pr-reader aside.pr-callout > *:last-child > *:last-child { margin-bottom: 0; }
 
 /* ── highlights (populated in M7; base styles kept here so marks render) ── */
 html.pr-on #pr-reader mark.hl {
