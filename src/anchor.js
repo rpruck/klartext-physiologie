@@ -73,6 +73,10 @@
     const blocks = new Set(); let n;
     while ((n = tw.nextNode())) {
       if (!n.textContent.trim()) continue;
+      // Controls we injected into the reader are not the page's text. Left in,
+      // every section's "Abschnitt einklappen" hashed to the same block and
+      // crowded the map with rows nothing can ever anchor to.
+      if (n.parentElement && n.parentElement.closest('.pr-chrome')) continue;
       let el = n.parentElement;
       while (el && el !== root && !isBlockLevel(el)) el = el.parentElement;
       if (el && el !== root) blocks.add(el);

@@ -22,9 +22,11 @@
   color: var(--ink);
   font-size: 16px;
   line-height: 1.4;
-  /* the reading rail's strip along the right edge; the note gutter and the
-     toaster keep clear of it rather than sitting on its ticks */
-  --rail-w: 1.1rem;
+  /* The reading rail's lane down the right edge; the note gutter and the
+     toaster keep clear of it rather than sitting on its ticks. The ticks
+     themselves only paint the last ~15px of it — the rest is reach, because a
+     7px-wide target on the window edge is one you hunt for. */
+  --rail-w: 3rem;
 }
 .pr-ui-root * { box-sizing: border-box; }
 
@@ -141,7 +143,7 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
    Quiet by default — labels, marks and the readout only come out on hover. */
 .pr-rail {
   position: fixed;
-  top: 4.6rem; bottom: 3.2rem; right: .5rem;
+  top: 4.6rem; bottom: 3.2rem; right: .35rem;
   width: var(--rail-w);
   pointer-events: auto;
   z-index: 38;
@@ -158,6 +160,15 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
   opacity: .26;
   cursor: pointer;
   transition: width .12s var(--ease), opacity .3s var(--ease), background .3s var(--ease);
+}
+/* A 7×1px hairline is not something you can hit. Each tick claims the full
+   width of the lane and the whole 10px pitch as its target, so the ticks tile
+   the rail and the pointer is always on one of them. */
+.rail-tick::before {
+  content: "";
+  position: absolute;
+  right: 0; top: -5px;
+  width: var(--rail-w); height: 10px;
 }
 .rail-tick.head { width: 11px; opacity: .34; }
 /* read: the tick recedes. The whole point is that it happens without being
@@ -217,6 +228,17 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
 .rail-reset { font-family: var(--font-label); font-size: .55rem; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; color: var(--ink-soft); background: transparent; border: 1px solid var(--hair); border-radius: 999px; padding: .25rem .5rem; cursor: pointer; }
 .rail-reset:hover { color: var(--ink); border-color: var(--accent-line); }
 .rail-reset.armed { color: var(--accent-ink); border-color: var(--accent-line); background: var(--accent-tint); }
+
+/* Everything the rail reveals lingers for a moment after the pointer leaves,
+   so drifting a few pixels off it on the way to a label or the reset doesn't
+   snatch the whole thing away. Coming IN is immediate; only going out waits.
+   Must sit after the rules above — their `transition` shorthands would reset
+   the delay back to zero. */
+.rail-label, .rail-foot, .rail-mark-cap, .rail-mark-x { transition-delay: .5s; }
+.pr-rail:hover .rail-label,
+.pr-rail:hover .rail-foot,
+.rail-mark:hover .rail-mark-cap,
+.rail-mark:hover .rail-mark-x { transition-delay: 0s; }
 
 @media (max-width: 900px) { .pr-rail { display: none; } }
 

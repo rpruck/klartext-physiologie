@@ -179,11 +179,20 @@
 
     reader.insertBefore(sec, nodes[0]);
     nodes.forEach((el) => body.appendChild(el));
+
+    /* Closing a long section otherwise means scrolling all the way back to its
+       head — which is exactly the thing you have just finished reading past. */
+    const fold = document.createElement('button');
+    fold.className = 'pr-sec-fold pr-chrome';
+    fold.type = 'button';
+    fold.textContent = 'Abschnitt einklappen';
+    body.appendChild(fold);
     sec.append(head, body);
 
-    const entry = { id, title, sec, head, body, btn };
+    const entry = { id, title, sec, head, body, btn, fold };
     byId.set(id, entry);
     btn.addEventListener('click', () => toggle(id));
+    fold.addEventListener('click', () => close(id));
     if (UNTIL_FOUND) body.addEventListener('beforematch', () => open(id, false));
     return entry;
   }
