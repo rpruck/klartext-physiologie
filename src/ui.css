@@ -74,16 +74,15 @@
 /* Two halves of one pill: set a mark · read the book's marks. The outer radii
    are the pill's, the seam between them is a single hairline, and hover tints
    only the half under the pointer — so the split is legible before you click.
-   Each half keeps a full LINE BOX (inline-block, the icon buttons' font size)
-   rather than shrinking to its drawing — that is what holds the pill at the
-   height of every other control in the bar. */
-.tb-split { display: inline-flex; }
+   A half holds no text, so left to itself it shrinks to its drawing and the
+   pill stands shorter than every other control in the bar. `align-self:
+   stretch` takes the height from the ROW instead — whatever the label font
+   turns out to be, the pill is exactly as tall as its neighbours. */
+.tb-split { display: inline-flex; align-self: stretch; }
 .tb-half {
-  display: inline-block;
-  font-size: .95rem;
-  line-height: 1;
-  text-align: center;
+  font-size: .95rem;           /* the icon buttons' size — what the glyph is measured against */
   padding: .38rem .62rem;
+  justify-content: center;
 }
 .tb-split > .tb-half:first-child { border-radius: 999px 0 0 999px; border-right-width: 0; padding-right: .55rem; }
 .tb-split > .tb-half:last-child { border-radius: 0 999px 999px 0; border-left-color: var(--hair); padding-left: .55rem; }
@@ -93,13 +92,16 @@
 .tb-btn.active { color: var(--accent-ink); border-color: var(--accent-line); background: var(--accent-tint); }
 .tb-btn[hidden] { display: none; }
 
-/* An icon button is the same pill, squared off around a single glyph. */
+/* An icon button is the same pill, squared off around a single glyph — and, a
+   glyph being shorter than a line of type, given the row's height rather than
+   its own (Space Mono sets the labelled buttons two pixels taller). */
 .tb-icon {
   font-family: inherit;
   font-size: .95rem;
   letter-spacing: 0;
   line-height: 1;
   padding: .38rem .5rem;
+  align-self: stretch;
   justify-content: center;
   min-width: 2rem;
 }

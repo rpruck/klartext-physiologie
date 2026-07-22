@@ -240,7 +240,10 @@
   async function loadCss() {
     try {
       const url = chrome.runtime.getURL('src/ui.css');
-      const txt = await fetch(url).then((r) => r.text());
+      /* no-cache, or an edited stylesheet keeps rendering as whatever the HTTP
+         cache kept from the last session: the URL never changes across extension
+         reloads, so the reload alone doesn't invalidate it. A local file. */
+      const txt = await fetch(url, { cache: 'no-cache' }).then((r) => r.text());
       const style = document.createElement('style');
       style.textContent = txt;
       shadow.appendChild(style);
