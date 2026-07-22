@@ -734,6 +734,7 @@
     let html = '';
     for (const r of resolveGloss(runs)) {
       if (r.anchor) html += '<span class="pr-anchor" id="' + esc(r.anchor) + '"></span>';
+      if (r.brk) { html += '<br>'; continue; }
       let t = esc(r.text || '');
       if (!t) continue;
       const st = r.st || {};
@@ -763,32 +764,110 @@
     }
     return [term, def];
   }
+  /* A cell's <br>s ARE its content: "Acetylcholin (M2) / GABA / Histamin" is
+     three ligands, and dropping them merged the words into "…(M2)GABAHistamin".
+     Kept — except where the author hard-wrapped a word to fit the 1990s column
+     ("G-Protein-<br>gekoppelte"), where the break is typography, not structure. */
   function renderInlineOf(el, counts, baseline) {
-    const toks = tokenize(el, counts, baseline);
     const runs = [];
-    for (const t of toks) { if (t.k === 'text') runs.push({ text: t.text, st: t.st }); else if (t.k === 'anchor') runs.push({ text: '', anchor: t.id }); }
-    return renderRuns(runs);
+    for (const t of tokenize(el, counts, baseline)) {
+      if (t.k === 'text') runs.push({ text: t.text, st: t.st });
+      else if (t.k === 'anchor') runs.push({ text: '', anchor: t.id });
+      else if (t.k === 'br' || t.k === 'block') runs.push({ brk: true });
+    }
+    const out = [];
+    // '' when there is nothing to break away from — swallows leading and
+    // doubled breaks without a second pass
+    const tail = () => {
+      for (let i = out.length - 1; i >= 0; i--) {
+        if (out[i].brk) return '';
+        const t = (out[i].text || '').trim();
+        if (t) return t;
+      }
+      return '';
+    };
+    let trim = false;                    // the indent the source opens the next line with
+    for (let r of runs) {
+      if (r.brk) {
+        const t = tail();
+        if (!t) continue;
+        trim = true;
+        if (!/-$/.test(t)) out.push(r);  // else the break was a hard-wrapped word
+        continue;
+      }
+      if (trim && r.text) {
+        const t = r.text.replace(/^\s+/, '');
+        if (!t && !r.anchor) continue;
+        if (t) { r = Object.assign({}, r, { text: t }); trim = false; }
+      }
+      out.push(r);
+    }
+    while (out.length && out[out.length - 1].brk) out.pop();
+    return renderRuns(out);
+  }
+  const cellSpan = (c, a) => Math.max(1, parseInt(c.getAttribute(a), 10) || 1);
+  /* The grids lean on rowspan to group rows — "GPCR" stands beside the three
+     receptor families under it. Dropped, every row the span shortened slid a
+     column to the left and the whole table sheared. Walk the grid keeping a
+     per-column carry of what is still occupied from above, so a row knows its
+     true width and whether it is short because of a span (keep it) or because
+     it is a full-width title row (promote it to the caption). */
+  function gridRows(el) {
+    const carry = [];
+    return [...el.querySelectorAll('tr')].filter((tr) => tr.closest('table') === el).map((tr) => {
+      const cells = rowCells(tr);
+      let col = 0, held = 0;
+      for (const c of cells) {
+        while (carry[col] > 0) { col++; held++; }
+        const cs = cellSpan(c, 'colspan');
+        for (let k = 0; k < cs; k++) carry[col + k] = cellSpan(c, 'rowspan');
+        col += cs;
+      }
+      let width = col;
+      for (; col < carry.length; col++) if (carry[col] > 0) { held++; width = col + 1; }
+      for (let k = 0; k < carry.length; k++) if (carry[k] > 0) carry[k]--;
+      return { cells, width, held };
+    });
   }
   function renderTable(block, counts, baseline) {
     const { kind, el } = block;
     if (kind === 'data') {
-      const rows = [...el.querySelectorAll('tr')];
-      const maxCols = Math.max(1, ...rows.map((tr) => tr.querySelectorAll('td, th').length));
+      const grid = gridRows(el);
+      const maxCols = Math.max(1, ...grid.map((g) => g.width));
       const out = document.createElement('table'); out.className = 'pr-data';
-      let capText = '';
-      rows.forEach((tr) => {
-        const cells = [...tr.querySelectorAll('td, th')];
-        if (cells.length <= 1 && maxCols > 1) { const t = norm(tr.textContent); if (t) capText += (capText ? ' — ' : '') + t; return; }
+      const rows = grid.filter((g) => g.cells.length);
+      const isFull = (g) => g && g.cells.length === 1 && !g.held && maxCols > 1 && cellSpan(g.cells[0], 'rowspan') === 1;
+      // Only the rows the table OPENS with are its title. The same full-width
+      // shape further down divides the grid into two blocks ("Ligandenaktivierte
+      // Ca++-Kanäle", halfway through I.1's channel table) — hoisted into the
+      // caption it tore the second half loose from what names it.
+      let lead = 0;
+      while (isFull(rows[lead])) lead++;
+      const heads = rows.slice(0, lead).map((g) => g.cells[0]);
+      const body = rows.slice(lead);
+      // The site never writes a <th>; it paints the column headings instead —
+      // one tint right across the row, body cells left white. isBluish catches
+      // only the dark blue a few pages use, so read the row off that contrast
+      // too: the top row, and any row opening a block a divider just started.
+      const mixed = body.some((g) => g.cells.some((c) => !isColored(cellBg(c))));
+      body.forEach((g, i) => {
+        const band = isFull(g);
+        const head = !band && mixed && (i === 0 || isFull(body[i - 1])) && g.cells.every((c) => isColored(cellBg(c)));
         const row = document.createElement('tr');
-        cells.forEach((c) => {
+        g.cells.forEach((c) => {
           const td = document.createElement('td');
-          if (isBluish(cellBg(c)) || isCellBold(c)) td.className = 'pr-th';
+          const cs = cellSpan(c, 'colspan'), rs = cellSpan(c, 'rowspan');
+          if (band) td.colSpan = maxCols;
+          else if (cs > 1) td.colSpan = cs;
+          if (rs > 1) td.rowSpan = rs;
+          if (band) td.className = 'pr-band';
+          else if (head || isBluish(cellBg(c)) || isCellBold(c)) td.className = 'pr-th';
           td.innerHTML = renderInlineOf(c, counts, baseline);
           row.appendChild(td);
         });
-        if (row.children.length) out.appendChild(row);
+        out.appendChild(row);
       });
-      if (capText) { const cap = document.createElement('caption'); cap.textContent = capText; out.insertBefore(cap, out.firstChild); }
+      if (heads.length) out.insertBefore(tableHead(heads, counts, baseline), out.firstChild);
       return out;
     }
     const wrap = document.createElement(kind === 'impp' ? 'aside' : 'div');
@@ -804,27 +883,46 @@
     } else wrap.appendChild(blocksOf(el));
     return wrap;
   }
-  /* The title cell holds the name and, set smaller, where it came from ("Nach
-     Feher J, Quantitative Human Physiology…"). That size drop is the only thing
-     separating them, so split on it. */
+  /* → { title, src } — a title cell holds the name and, set smaller, where it
+     came from ("Nach Feher J, Quantitative Human Physiology…"). That size drop
+     is the only thing separating them, so split on it. Same two-part shape as a
+     figure caption; a titled box and a data table both open with one. */
+  function headRuns(cell, counts, baseline) {
+    const b = assemble(tokenize(cell, counts, baseline), baseline).find((x) => x.t === 'p' || x.t === 'h');
+    if (!b) return null;
+    // A sup/sub is set smaller by definition — measured, the "++" of "Ca++"
+    // reads as the size drop and cuts the title in half.
+    const full = (r) => (r.text || '').trim() && !(r.st && (r.st.sup || r.st.sub));
+    const words = b.runs.filter(full);
+    const max = words.reduce((m, r) => Math.max(m, (r.st && r.st.size) || 0), 0);
+    const cut = max ? b.runs.findIndex((r) => full(r) && ((r.st && r.st.size) || max) <= max - 1.5) : -1;
+    return cut < 0 ? { title: b.runs, src: null } : { title: b.runs.slice(0, cut), src: b.runs.slice(cut) };
+  }
   function boxHead(cell, counts, baseline) {
     const frag = document.createDocumentFragment();
-    const b = assemble(tokenize(cell, counts, baseline), baseline).find((x) => x.t === 'p' || x.t === 'h');
-    if (!b) return frag;
-    const words = b.runs.filter((r) => (r.text || '').trim());
-    const max = words.reduce((m, r) => Math.max(m, (r.st && r.st.size) || 0), 0);
-    const cut = max ? b.runs.findIndex((r) => (r.text || '').trim() && ((r.st && r.st.size) || max) <= max - 1.5) : -1;
-    const title = document.createElement('p');
-    title.className = 'pr-box-title';
-    title.innerHTML = renderRuns(cut < 0 ? b.runs : b.runs.slice(0, cut));
-    frag.appendChild(title);
-    if (cut >= 0) {
-      const sub = document.createElement('p');
-      sub.className = 'pr-box-sub';
-      sub.innerHTML = renderRuns(b.runs.slice(cut));
-      frag.appendChild(sub);
-    }
+    const h = headRuns(cell, counts, baseline);
+    if (!h) return frag;
+    const add = (cls, runs) => { const p = document.createElement('p'); p.className = cls; p.innerHTML = renderRuns(runs); frag.appendChild(p); };
+    add('pr-box-title', h.title);
+    if (h.src) add('pr-box-sub', h.src);
     return frag;
+  }
+  // The table's title row is the figure caption's shape, so give it the figure
+  // caption's look. Extra promoted rows are always a further source line.
+  function tableHead(cells, counts, baseline) {
+    const cap = document.createElement('caption');
+    const add = (cls, runs) => {
+      const s = document.createElement('span'); s.className = cls;
+      s.innerHTML = renderRuns(runs).trim();
+      if (s.innerHTML) cap.appendChild(s);
+    };
+    cells.forEach((c, i) => {
+      const h = headRuns(c, counts, baseline);
+      if (!h) return;
+      if (i === 0) { add('pr-figcap-title', h.title); if (h.src) add('pr-figcap-src', h.src); }
+      else add('pr-figcap-src', h.title.concat(h.src || []));
+    });
+    return cap;
   }
   function emitAnchors(frag, ids, seen) {
     for (const id of ids || []) { if (!id || seen.has(id)) continue; seen.add(id); const s = document.createElement('span'); s.className = 'pr-anchor'; s.id = id; frag.appendChild(s); }

@@ -57,8 +57,21 @@ throw away wholesale. Three families are read back out (`LABELS`, `GLOSS_BADGE`,
   `text-align:center` — I.0 nests a left-aligned prose div inside a centred one.
 
 A table whose rows all hold **one** cell is a titled box, not a data grid (`classifyTable`): row 1
-becomes `.pr-box-title` + `.pr-box-sub` (split where the source drops the font size for its source
-line), the rest goes through the normal block pipeline so its bulleted lines become a real list.
+becomes `.pr-box-title` + `.pr-box-sub` (split by `headRuns`, where the source drops the font size for
+its source line), the rest goes through the normal block pipeline so its bulleted lines become a real
+list.
+
+A data grid keeps its `rowspan`/`colspan` — the site groups rows with them ("GPCR" beside its three
+receptor families) and dropping them slid every shortened row a column left. `gridRows` walks the
+table with a per-column carry so each row knows its true width *and* whether it is short because of a
+span above. That tells the three full-width shapes apart: the rows a table **opens** with are its
+title (`tableHead` → `.pr-figcap-title`/`-src` in a `<caption>`, the same two-part treatment as a
+figure), the same shape partway down is a divider between blocks of the grid (`td.pr-band`), and a
+short row under a span is just a row. Headings are painted, never `<th>`: a row whose cells are *all*
+coloured where body cells are not becomes `.pr-th` — the top row, and any row a divider just opened.
+Inside a cell the `<br>`s are content ("Acetylcholin (M2) / GABA / Histamin" is three ligands, and
+dropped they merged into one word), so `renderInlineOf` keeps them — except after a trailing hyphen,
+where the author hard-wrapped a word to fit the 1990s column.
 
 Figure captions are the same two-part shape: "Abbildung: …" over the source it came from ("Nach einer
 Vorlage bei …"), separated by a `<br>` — or, on a few pages, by a whole `<div>`. `assemble` records

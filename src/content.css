@@ -468,26 +468,46 @@ html.pr-on #pr-reader table.pr-data {
   font-size: .94em;
   margin: 2.2em 0;
 }
+/* The title row is the same two-part shape as a figure caption (name over
+   source), so reskin.js hands it the same .pr-figcap-title/-src pair and it
+   gets the same treatment — a table and a figure announce themselves alike. */
 html.pr-on #pr-reader table.pr-data caption {
   caption-side: top;
-  text-align: left;
-  font-family: var(--font-label);
-  font-size: .74rem;
-  letter-spacing: .01em;
-  color: var(--ink-soft);
-  padding-bottom: .7em;
+  text-align: center;
+  max-width: 48ch;
+  margin: 0 auto;
+  padding-bottom: .9em;
 }
 html.pr-on #pr-reader table.pr-data td {
   padding: .5em .7em;
   border-bottom: 1px solid var(--hair-soft);
   vertical-align: top;
   text-align: left;
+  hyphens: manual;   /* justify mode hyphenates a narrow column to shreds */
+}
+/* a cell spanning rows labels the group beside it — centre it against them */
+html.pr-on #pr-reader table.pr-data td[rowspan] {
+  vertical-align: middle;
+  border-right: 1px solid var(--hair-soft);
+  padding-right: .9em;
 }
 html.pr-on #pr-reader table.pr-data td.pr-th {
   font-weight: 600;
   color: var(--accent-ink);
   border-bottom: 1.5px solid var(--accent);
 }
+/* a full-width row partway down divides the grid into blocks — it names the
+   rows under it, so set it like a small heading rather than a data row */
+html.pr-on #pr-reader table.pr-data td.pr-band {
+  font-weight: 600;
+  color: var(--accent-ink);
+  text-align: left;
+  padding-top: 1.6em;
+  border-bottom: 1.5px solid var(--accent);
+}
+html.pr-on #pr-reader table.pr-data tr:first-child td.pr-band { padding-top: .5em; }
+/* …unless it trails the grid, where it is a "see also", not a heading */
+html.pr-on #pr-reader table.pr-data tr:last-child td.pr-band { border-bottom: 0; }
 html.pr-on #pr-reader table.pr-data tr:hover td { background: var(--accent-tint); }
 
 /* yellow callouts (the source paints them for emphasis, not just for exam
