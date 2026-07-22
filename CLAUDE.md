@@ -50,10 +50,23 @@ throw away wholesale. Three families are read back out (`LABELS`, `GLOSS_BADGE`,
 - **Image bullets** — small glyphs (spheres, asterisks, arrows) at the head of a line become
   `<ul class="pr-list" data-bullet="arrow|dot">`. A list of one is handed back to the prose, since an
   isolated marker is usually the 12×12 dot in front of an "Abbildung: …" caption.
+- **Drawn hierarchies** — a centred stack of `<br>`-separated levels with a lone ↑ between them
+  (I.0's system hierarchy). Nothing in it is heading-shaped, so linearizing flattened the whole
+  ladder into one run-on paragraph. A run of lines that are each either arrow-only or a short label,
+  with ≥2 of each, becomes `div.pr-ladder`. Content-based, deliberately **not** keyed on
+  `text-align:center` — I.0 nests a left-aligned prose div inside a centred one.
 
 A table whose rows all hold **one** cell is a titled box, not a data grid (`classifyTable`): row 1
 becomes `.pr-box-title` + `.pr-box-sub` (split where the source drops the font size for its source
 line), the rest goes through the normal block pipeline so its bulleted lines become a real list.
+
+Figure captions are the same two-part shape: "Abbildung: …" over the source it came from ("Nach einer
+Vorlage bei …"), separated by a `<br>` — or, on a few pages, by a whole `<div>`. `assemble` records
+where it joined lines (`brk`) so `splitCaption` can peel the citation back off, and the block-boundary
+variant is absorbed from the paragraph after the figure (`CAP_SRC_BLOCK`, deliberately stricter, since
+prose may legitimately open "Nach der Geburt…"). Both halves render inside one `figcaption.pr-figcap`
+as `.pr-figcap-title` + `.pr-figcap-src`, styled to match the box title/sub pair above. Left merged,
+the caption lines also seed the glossary heuristic — hence the `CAP` guards in `isGloss`/`isEntry`.
 
 ### Where-am-I (chapter / section)
 

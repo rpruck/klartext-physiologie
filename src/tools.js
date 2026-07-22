@@ -50,14 +50,18 @@
   // ── lightbox (preview + zoom + pan) ──────────────────────────────────────
   let lbCurrent = null, lbScale = 1, lbX = 0, lbY = 0;
 
+  // A caption is a title over its source line; the lightbox has room for the
+  // name of the figure, not the citation behind it.
+  const capText = (el) => (el.querySelector('.pr-figcap-title') || el).textContent.trim();
+
   function figCaption(img) {
     const fig = img.closest('figure.pr-fig') || img;
-    if (fig.querySelector && fig.querySelector('.pr-figcap')) return fig.querySelector('.pr-figcap').textContent.trim();
+    if (fig.querySelector && fig.querySelector('.pr-figcap')) return capText(fig.querySelector('.pr-figcap'));
     let el = fig.nextElementSibling, hops = 0;
     while (el && hops < 5) {
-      if (el.classList && el.classList.contains('pr-figcap')) return el.textContent.trim();
+      if (el.classList && el.classList.contains('pr-figcap')) return capText(el);
       const inner = el.querySelector && el.querySelector('.pr-figcap');
-      if (inner) return inner.textContent.trim();
+      if (inner) return capText(inner);
       el = el.nextElementSibling; hops++;
     }
     return '';

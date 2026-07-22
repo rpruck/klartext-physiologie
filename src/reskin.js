@@ -404,6 +404,38 @@
   // "Abbildung: …" / "Nach …" — a caption, both when it trails a figure and
   // when the 12×12 marker in front of it looks like a bullet.
   const CAP = /^\s*(Abbildung|Abb\.|Abb\b|Nach\s|Fig\.|©)/;
+  // A caption is always written as a title line, a <br>, then where it came
+  // from ("Nach einer Vorlage bei Silverthorn…"). Merged into one paragraph the
+  // citation reads as part of the title, so split it back off at that break.
+  // The leading .? absorbs the odd letter the source orphans onto the front of
+  // the line (VIII.2: "…Thorax-Lungen-Systems<br>N</font>Nach einer Vorlage…"),
+  // a typo the original renders as "NNach" too — keep the text, fix the place.
+  const CAP_SRC = /^\s*.?\s*(Nach\b|©|Aus\s|Quelle|Modifiziert|Adaptiert|Fig\.)/;
+  // Some citations sit in a <div> of their own rather than a <br> away, so they
+  // survive the merge as a paragraph and print under the figure in body type.
+  // Standing alone the line has to announce itself: prose may open "Aus diesen
+  // Gründen…" or "Nach der Geburt…", a citation names a source.
+  const CAP_SRC_BLOCK = /^\s*(Nach einer Vorlage|Nach\s+\p{Lu}|©)/u;
+
+  /* ── drawn hierarchies ──────────────────────────────────────────────────
+     I.0 draws its system hierarchy as a centred stack of <br>-separated lines
+     with a lone ↑ between the levels. No line is heading-shaped, so all of them
+     fall into one paragraph and the ladder reads "↑ Körper ↑ physiologisches
+     System ↑ …". Detect the shape and keep the stack. NOT keyed on
+     text-align:center — I.0 nests a left-aligned prose div inside a centred
+     one, so alignment says nothing here. */
+  const ARROW_ONLY = /^[←-⇿⬀-⬑\s ]+$/;
+  const LADDER_STEP_MAX = 44;
+
+  // → { title, src } — the caption's own line break decides where the citation
+  //   starts; a caption that never states a source is all title.
+  function splitCaption(p) {
+    for (const at of p.brk || []) {
+      const tail = norm(p.runs.slice(at + 1).map((r) => r.text).join(''));
+      if (CAP_SRC.test(tail)) return { title: p.runs.slice(0, at), src: p.runs.slice(at + 1) };
+    }
+    return { title: p.runs, src: null };
+  }
 
   function assemble(toks, baseline) {
     const lines = [];
@@ -433,8 +465,34 @@
       return null;
     };
     const lineLinked = (l) => { const p = (l.runs || []).filter((r) => (r.text || '').trim()); return p.length > 0 && p.every((r) => r.st && r.st.href); };
-    const isGloss = (l) => l.runs && GLOSS.test(lineText(l)) && lineText(l).length <= 200;
+    // "Abbildung: Hierarchie-Ebenen…" and "Nach: Mommaerts et al…." both have
+    // the shape of a glossary entry. Left unguarded the caption seeds glossFlag
+    // and its own source line is then emitted as a definition, detached from
+    // the figure it belongs to.
+    const isGloss = (l) => l.runs && GLOSS.test(lineText(l)) && lineText(l).length <= 200 && !CAP.test(lineText(l));
     const glossFlag = lines.map((l) => !l.special && isGloss(l));
+
+    /* Tag the members of every arrow ladder. A line joins when it is nothing
+       but arrows or a short label; a run only counts as a ladder with at least
+       two of each, which the inline "A → B" of ordinary prose can never reach
+       (those never stand on a line of their own). */
+    const ladderMember = (l) => {
+      if (l.special) return false;
+      const t = lineText(l);
+      if (!t) return false;
+      if (ARROW_ONLY.test(t)) return 'arrow';
+      if (t.length > LADDER_STEP_MAX || /[.!?:;]\s|[.!?]$/.test(t)) return false;
+      return lineBullet(l) ? false : 'step';
+    };
+    for (let i = 0; i < lines.length;) {
+      const kinds = [];
+      let j = i;
+      for (let k; j < lines.length && (k = ladderMember(lines[j])); j++) kinds.push(k);
+      if (kinds.filter((k) => k === 'arrow').length >= 2 && kinds.filter((k) => k === 'step').length >= 2) {
+        for (let k = i; k < j; k++) lines[k].ladder = kinds[k - i];
+      }
+      i = j > i ? j : i + 1;
+    }
 
     function headingLevel(l) {
       const txt = lineText(l);
@@ -456,21 +514,24 @@
     }
 
     const blocks = [];
-    let para = null, deflist = null, pending = [], label = null, inGloss = false;
+    let para = null, deflist = null, ladder = null, pending = [], label = null, inGloss = false;
     const drain = () => { const a = pending; pending = []; return a; };
     // A 'lead' label belongs to the block that FOLLOWS it, so it is claimed
     // when that block starts — not when it is flushed, which can be much later.
     const takeLabel = () => { const l = label; label = null; return l; };
-    const flushPara = () => { if (para && norm(para.runs.map((r) => r.text).join(''))) blocks.push({ t: 'p', runs: para.runs, anchors: para.anchors, bullet: para.bullet, label: para.label }); para = null; };
+    // brk records where lines were joined, the one thing the merge would
+    // otherwise destroy — a caption needs it back to peel its source line off.
+    const flushPara = () => { if (para && norm(para.runs.map((r) => r.text).join(''))) blocks.push({ t: 'p', runs: para.runs, brk: para.brk, anchors: para.anchors, bullet: para.bullet, label: para.label }); para = null; };
     const flushDef = () => { if (deflist && deflist.items.length) blocks.push({ t: 'deflist', items: deflist.items, anchors: deflist.anchors, label: deflist.label }); deflist = null; };
-    const flushGroups = () => { flushPara(); flushDef(); };
+    const flushLadder = () => { if (ladder && ladder.items.length) blocks.push({ t: 'ladder', items: ladder.items, anchors: ladder.anchors }); ladder = null; };
+    const flushGroups = () => { flushPara(); flushDef(); flushLadder(); };
 
     for (let i = 0; i < lines.length; i++) {
       const l = lines[i];
       if (l.special) {
         flushGroups();
         const s = l.special, anchors = drain();
-        if (s.k === 'fig') blocks.push({ t: 'fig', src: s.src, w: s.w, h: s.h, alt: s.alt, cap: '', anchors });
+        if (s.k === 'fig') blocks.push({ t: 'fig', src: s.src, w: s.w, h: s.h, alt: s.alt, cap: null, anchors });
         else if (s.k === 'nav') blocks.push({ t: 'nav', href: s.href, label: s.label, dir: s.dir, anchors });
         else if (s.k === 'hr') blocks.push({ t: 'hr', anchors });
         else if (s.k === 'table') blocks.push({ t: 'table', kind: s.kind, el: s.el, anchors });
@@ -494,14 +555,20 @@
         else flushGroups();
         continue;
       }
+      if (l.ladder) {
+        if (!ladder) { flushGroups(); ladder = { items: [], anchors: drain() }; }
+        ladder.items.push({ runs: l.runs, arrow: l.ladder === 'arrow' });
+        continue;
+      }
+      flushLadder();
       // A bullet line always starts a fresh item; wrapped continuation lines
       // then fall into it like any other paragraph. "Abbildung: …" is a caption
       // whose marker only looks like a bullet — never a one-item list.
       const bullet = lineBullet(l);
-      if (bullet && !CAP.test(txt)) { flushGroups(); para = { runs: [], anchors: drain(), bullet, label: takeLabel() }; }
+      if (bullet && !CAP.test(txt)) { flushGroups(); para = { runs: [], brk: [], anchors: drain(), bullet, label: takeLabel() }; }
 
-      const isEntry = (glossFlag[i] && (glossFlag[i - 1] || glossFlag[i + 1])) ||
-        (inGloss && GLOSS_LOOSE.test(txt) && txt.length <= 300);
+      const isEntry = !CAP.test(txt) && ((glossFlag[i] && (glossFlag[i - 1] || glossFlag[i + 1])) ||
+        (inGloss && GLOSS_LOOSE.test(txt) && txt.length <= 300));
       if (!bullet && isEntry) {
         flushPara();
         if (!deflist) deflist = { items: [], anchors: drain(), label: takeLabel() };
@@ -512,8 +579,8 @@
       flushDef();
       const lvl = bullet ? 0 : headingLevel(l);
       if (lvl) { flushPara(); blocks.push({ t: 'h', level: lvl, runs: l.runs, anchors: drain(), label: takeLabel() }); continue; }
-      if (!para) para = { runs: [], anchors: drain(), label: takeLabel() };
-      if (para.runs.length) para.runs.push({ text: ' ', st: {} });
+      if (!para) para = { runs: [], brk: [], anchors: drain(), label: takeLabel() };
+      if (para.runs.length) { para.brk.push(para.runs.length); para.runs.push({ text: ' ', st: {} }); }
       para.runs.push(...l.runs);
     }
     flushGroups();
@@ -549,8 +616,14 @@
       const nxt = blocks[i + 1];
       if (nxt && nxt.t === 'p') {
         const txt = norm(nxt.runs.map((r) => r.text).join(''));
-        if (CAP.test(txt) && txt.length < 320) { blocks[i].cap = txt; blocks.splice(i + 1, 1); }
+        if (CAP.test(txt) && txt.length < 320) { blocks[i].cap = splitCaption(nxt); blocks.splice(i + 1, 1); }
       }
+      // then the citation, where a block boundary rather than a <br> split it
+      // off and splitCaption never saw it.
+      const cap = blocks[i].cap, src = blocks[i + 1];
+      if (!cap || cap.src || !src || src.t !== 'p' || src.bullet || src.label) continue;
+      const txt = norm(src.runs.map((r) => r.text).join(''));
+      if (CAP_SRC_BLOCK.test(txt) && txt.length < 320) { cap.src = src.runs; blocks.splice(i + 1, 1); }
     }
     return blocks;
   }
@@ -843,8 +916,27 @@
         const im = document.createElement('img'); im.src = b.src; if (b.w) im.width = b.w; if (b.h) im.height = b.h; im.loading = 'lazy'; im.alt = b.alt || '';
         fitNatural(im, b.w || 0);
         fig.appendChild(im);
-        if (b.cap) { const fc = document.createElement('figcaption'); fc.className = 'pr-figcap'; fc.textContent = b.cap; fig.appendChild(fc); }
+        // The title names the figure, the second line says where it came from —
+        // two lines in the source, and they read as one run-on caption merged.
+        if (b.cap) {
+          const fc = document.createElement('figcaption'); fc.className = 'pr-figcap';
+          const t = document.createElement('span'); t.className = 'pr-figcap-title'; t.innerHTML = renderRuns(b.cap.title).trim();
+          fc.appendChild(t);
+          if (b.cap.src) { const s = document.createElement('span'); s.className = 'pr-figcap-src'; s.innerHTML = renderRuns(b.cap.src).trim(); fc.appendChild(s); }
+          fig.appendChild(fc);
+        }
         box.appendChild(fig);
+      }
+      else if (b.t === 'ladder') {
+        const d = document.createElement('div'); d.className = 'pr-ladder';
+        for (const it of b.items) {
+          const e = document.createElement(it.arrow ? 'span' : 'p');
+          e.className = it.arrow ? 'pr-ladder-arrow' : 'pr-ladder-step';
+          if (it.arrow) e.setAttribute('aria-hidden', 'true');
+          e.innerHTML = renderRuns(it.runs);
+          d.appendChild(e);
+        }
+        box.appendChild(d);
       }
       else if (b.t === 'table') box.appendChild(renderTable(b, counts, baseline));
     }
