@@ -888,15 +888,22 @@
      is the only thing separating them, so split on it. Same two-part shape as a
      figure caption; a titled box and a data table both open with one. */
   function headRuns(cell, counts, baseline) {
-    const b = assemble(tokenize(cell, counts, baseline), baseline).find((x) => x.t === 'p' || x.t === 'h');
-    if (!b) return null;
+    // The site pads a title cell with a 10×5 Platzhalter.jpg on a line of its
+    // own, which assemble reads as a blank line and flushes the paragraph on.
+    // So the cell is rarely ONE block, and taking the first alone dropped every
+    // source line sitting behind a spacer ("Nach Albert Einstein 1905"). Join
+    // them back up; the size drop below still decides where the title ends.
+    const parts = assemble(tokenize(cell, counts, baseline), baseline).filter((x) => x.t === 'p' || x.t === 'h');
+    if (!parts.length) return null;
+    const runs = [];
+    for (const p of parts) { if (runs.length) runs.push({ text: ' ', st: {} }); runs.push(...p.runs); }
     // A sup/sub is set smaller by definition — measured, the "++" of "Ca++"
     // reads as the size drop and cuts the title in half.
     const full = (r) => (r.text || '').trim() && !(r.st && (r.st.sup || r.st.sub));
-    const words = b.runs.filter(full);
+    const words = runs.filter(full);
     const max = words.reduce((m, r) => Math.max(m, (r.st && r.st.size) || 0), 0);
-    const cut = max ? b.runs.findIndex((r) => full(r) && ((r.st && r.st.size) || max) <= max - 1.5) : -1;
-    return cut < 0 ? { title: b.runs, src: null } : { title: b.runs.slice(0, cut), src: b.runs.slice(cut) };
+    const cut = max ? runs.findIndex((r) => full(r) && ((r.st && r.st.size) || max) <= max - 1.5) : -1;
+    return cut < 0 ? { title: runs, src: null } : { title: runs.slice(0, cut), src: runs.slice(cut) };
   }
   function boxHead(cell, counts, baseline) {
     const frag = document.createDocumentFragment();
