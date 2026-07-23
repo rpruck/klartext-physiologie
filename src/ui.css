@@ -615,7 +615,17 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
 .note .note-tag { font-family: var(--font-label); font-size: .56rem; letter-spacing: .12em; text-transform: uppercase; color: var(--accent-ink); }
 .note .note-del { border: 0; background: transparent; color: var(--ink-soft); cursor: pointer; font-size: .7rem; padding: 0 .2rem; }
 .note .note-del:hover { color: rgb(200, 70, 70); }
-@media (max-width: 1180px) { .pr-note-gutter { display: none; } }
+/* Too little margin for a note (tools.js measures the room and adds .floating):
+   the gutter stops living in the margin and floats over the column's right edge.
+   Still clear of the reading rail; cards keep the normal note shadow. */
+.pr-note-gutter.floating {
+  /* right + width, not left + right: the notes are position:absolute, so they
+     don't stretch the gutter, and left:auto alone would collapse it to 0. */
+  left: auto;
+  right: calc(1rem + var(--rail-w));
+  width: min(300px, calc(100vw - 2rem - var(--rail-w)));
+  max-width: none;
+}
 
 /* ── highlight context menu (shadcn-style) ─────────────────────────────── */
 .ctx-menu {

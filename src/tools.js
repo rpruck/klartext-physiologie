@@ -130,6 +130,11 @@
   // sliver of the bar. A figure can be parked almost entirely outside the
   // window — but never so far that there is nothing left to grab it by.
   const PEEK = 44;
+  // Below this much bare right margin a note can't sit beside the column without
+  // being crammed into a sliver, so layoutNotes floats the cards over the text
+  // instead. ~250px reproduces the old fixed 1180px cutoff at the default 680px
+  // measure, now measure- and lane-relative (see settledRightMargin).
+  const NOTE_ROOM = 250;
   // clientWidth, not innerWidth: the scrollbar is not a place you can grab a
   // pin by, so a strip parked under it is not a strip. Asked of
   // document.scrollingElement rather than documentElement, because the book is
@@ -150,6 +155,24 @@
     const measure = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--measure')) || 680;
     const m = Math.max(0, (vw() - measure) / 2);
     return { left: m, right: m, edge: vw() - m };
+  }
+
+  // The right margin the column will have once SETTLED — computed, not measured,
+  // precisely where margins() can't be trusted: a lane toggle slides the column
+  // on a .35s `left` transition (content.css), so for that long the live rect
+  // reports where the column *was*. layoutNotes runs synchronously from
+  // settings.apply() mid-slide, so reading the live rect there stranded a note in
+  // the floating lane until the next scroll re-measured. Mirrors content.css:
+  // autoMargin is the centred margin; the image lane collapsing left widens it by
+  // --lane-room (--lane-edge 4rem + the reader's 1.4rem side padding = 5.4rem).
+  // Notes lane is always on when this is consulted, so only the image lane counts.
+  function settledRightMargin() {
+    const cs = getComputedStyle(document.documentElement);
+    const rem = parseFloat(cs.fontSize) || 16;
+    const measure = parseFloat(cs.getPropertyValue('--measure')) || 680;
+    const autoMargin = Math.max(0, (vw() - measure) / 2);
+    const laneRoom = Math.max(0, autoMargin - 5.4 * rem);
+    return autoMargin + (document.documentElement.dataset.laneImg === '0' ? laneRoom : 0);
   }
 
   // Park a pin of width w against the text column in the roomier margin — the
@@ -451,6 +474,11 @@
     // zeros and every note would be laid out against nothing. Nothing to do —
     // and this runs on every scroll frame, so it must bail cheaply.
     if (document.documentElement.dataset.laneNotes === '0') return;
+    // Too little margin for a note beside the column → float the cards over the
+    // text's right edge instead of hiding them (ui.css .floating). Toggle both
+    // ways so widening the window drops them back into the margin. settledRight,
+    // not margins().right, so a mid-transition lane toggle doesn't strand a note.
+    gutter.classList.toggle('floating', settledRightMargin() < NOTE_ROOM);
     /* null = none, '' = empty-but-open. A mark folded away inside a collapsed
        section has no box to align to, so its note leaves the gutter entirely
        rather than sitting on at its last position, orphaned from its text.
