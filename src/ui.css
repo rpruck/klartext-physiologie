@@ -456,22 +456,47 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
    used WITH the page, not instead of it — shrink it to one half and the reader
    in the other half stays lit, legible and pickable. */
 
-/* The rule the picker draws above the block under the pointer. Hairline in the
-   accent, with the word set in the margin at its right end rather than over the
-   text, so it never covers the line it is pointing at. */
-.insp-rule {
-  position: fixed; z-index: 88; height: 3px; pointer-events: none;
-  background: var(--accent); border-radius: 999px;
-  opacity: 0; transition: opacity .12s var(--ease);
+/* The magnetic picker cursor (inspect.js): a reticle of four corner brackets
+   that springs around the block under the pointer, plus a dot that tracks the
+   real pointer. Both are pointer-events:none markers — the click is handled on
+   the document, so they never sit between the pointer and the reader. The frame
+   is positioned/sized in JS (transform + width/height); the corners are pinned
+   to its box so one element reads the same as a 34px reticle or a block-frame. */
+.insp-cur {
+  position: fixed; left: 0; top: 0; z-index: 88;
+  pointer-events: none; will-change: transform, width, height;
+  opacity: 0; border: 1px dashed transparent; border-radius: 3px;
+  transition: opacity .14s var(--ease), border-color .18s var(--ease);
 }
-.insp-rule.show { opacity: 1; }
-.insp-rule-tag {
-  position: absolute; right: 0; top: -1.65rem;
+.insp-cur.show { opacity: 1; }
+.insp-cur.snapped { border-color: var(--accent-line); }
+.insp-cur-c {
+  position: absolute; width: 11px; height: 11px;
+  border: 2px solid var(--accent);
+}
+.insp-cur-c.tl { left: -2px; top: -2px; border-right: 0; border-bottom: 0; border-top-left-radius: 4px; }
+.insp-cur-c.tr { right: -2px; top: -2px; border-left: 0; border-bottom: 0; border-top-right-radius: 4px; }
+.insp-cur-c.bl { left: -2px; bottom: -2px; border-right: 0; border-top: 0; border-bottom-left-radius: 4px; }
+.insp-cur-c.br { right: -2px; bottom: -2px; border-left: 0; border-top: 0; border-bottom-right-radius: 4px; }
+/* The word, set at the frame's top-right and shown only once snapped. */
+.insp-cur-tag {
+  position: absolute; right: -1px; top: -1.5rem; white-space: nowrap;
   font-family: var(--font-label); font-size: .56rem; letter-spacing: .12em;
   text-transform: uppercase; color: var(--accent-ink);
   background: var(--accent-tint); border: 1px solid var(--accent-line);
   border-radius: 999px; padding: .1rem .4rem;
+  opacity: 0; transition: opacity .14s var(--ease);
 }
+.insp-cur.snapped .insp-cur-tag { opacity: 1; }
+/* The dot at the real pointer — a ring of paper keeps it legible on any bg. */
+.insp-dot {
+  position: fixed; left: 0; top: 0; z-index: 89;
+  width: 7px; height: 7px; margin: -3.5px 0 0 -3.5px; border-radius: 50%;
+  background: var(--accent); pointer-events: none; will-change: transform;
+  opacity: 0; transition: opacity .14s var(--ease);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--paper) 70%, transparent);
+}
+.insp-dot.show { opacity: 1; }
 
 .insp-win {
   position: fixed; z-index: 90; display: none; flex-direction: column;

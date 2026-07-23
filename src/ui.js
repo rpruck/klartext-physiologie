@@ -83,13 +83,19 @@
     </div>`;
   const TOASTER = `<div class="toaster" id="toaster" aria-live="polite"></div>`;
 
-  /* The source window: a hairline rule that follows the pointer while the
-     picker is armed, the movable frame the original renders in, and the
-     screenshot reminder that hangs in the opposite corner from it. No backdrop
-     — the whole point is that the reader stays visible and clickable beside it.
-     inspect.js fills #inspectHints and appends the iframe. */
+  /* The source window: the magnetic picker cursor (a reticle of four corner
+     brackets that snaps around the block under the pointer, plus a dot on the
+     real pointer), the movable frame the original renders in, and the screenshot
+     reminder that hangs in the opposite corner from it. No backdrop — the whole
+     point is that the reader stays visible and clickable beside it. inspect.js
+     drives the cursor, fills #inspectHints and appends the iframe. */
   const INSPECT = `
-    <div class="insp-rule" id="inspectRule"><span class="insp-rule-tag">Original</span></div>
+    <div class="insp-cur" id="inspectCur" aria-hidden="true">
+      <i class="insp-cur-c tl"></i><i class="insp-cur-c tr"></i>
+      <i class="insp-cur-c bl"></i><i class="insp-cur-c br"></i>
+      <span class="insp-cur-tag">Original</span>
+    </div>
+    <div class="insp-dot" id="inspectDot" aria-hidden="true"></div>
     <aside class="insp-win" id="inspectWin" aria-label="Originalquelltext">
       <div class="insp-bar">
         <span class="spacer"></span>

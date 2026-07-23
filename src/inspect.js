@@ -40,10 +40,32 @@
   const vh = () => vp().clientHeight || window.innerHeight;
 
   let reader = null, armed = false, open = false;
-  let win = null, frame = null, rule = null, hints = null, btn = null;
-  let hit = null;               // the block under the pointer, while armed
+  let win = null, frame = null, cur = null, dot = null, hints = null, btn = null;
+  let hit = null;               // the block the cursor is snapped to, while armed
   let loaded = false, want = null;   // ordinal queued until the iframe is up
   let geo = null;
+
+  /* ── the magnetic cursor ──────────────────────────────────────────────────
+     Modelled on Motion's "magnetic target" reticle, in plain JS: four corner
+     brackets that follow the pointer and, over a block, spring out to wrap it,
+     with a dot that keeps tracking the real pointer. It replaces the crosshair
+     and the hairline the picker used to draw. Deliberately static — the Motion
+     original spins its reticle; this one never rotates.
+
+     One rAF loop (running only while armed, from the first move) eases the frame
+     rect toward its target with frame-rate-independent smoothing and recomputes
+     the target every frame, so a snapped frame tracks the block as the page
+     scrolls with no separate scroll handler. */
+  const RET = 34;              // side of the off-target reticle
+  const PAD = 6;               // grown this far outside a snapped block
+  const F_RATE = 15;           // frame smoothing (1/s) — a crisp magnetic snap
+  const D_RATE = 45;           // dot smoothing (1/s) — near-instant, honest to the click
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+  let raf = 0, last = 0, curVis = false, snapped = false;
+  let pX = 0, pY = 0;                       // pointer
+  let fx = 0, fy = 0, fw = 0, fh = 0;       // frame, current
+  let tx = 0, ty = 0, tw = 0, th = 0;       // frame, target
+  let dx = 0, dy = 0;                        // dot, current
 
   /* ── geometry ─────────────────────────────────────────────────────────
      Persisted under its own storage key, not in `settings` — where a window
@@ -159,9 +181,10 @@
   function show() {
     if (!open) {
       open = true;
-      // The window lands under the cursor, so there is nothing hovered any
-      // more — left up, the rule of the block you just picked sits behind it.
-      drawRule(null);
+      // The window lands under the cursor, so there is nothing hovered any more
+      // — left up, the frame of the block you just picked sits behind it. It
+      // re-snaps on the next move back onto the reader.
+      hideCur();
       ensureFrame();
       win.classList.add('show');
       hints.classList.add('show');
@@ -202,24 +225,74 @@
     return null;
   }
 
-  function drawRule(el) {
-    hit = el || null;
-    if (!el) { rule.classList.remove('show'); return; }
-    const r = el.getBoundingClientRect();
-    if (r.width < 2 || r.bottom < 0 || r.top > vh()) { rule.classList.remove('show'); return; }
-    rule.style.left = r.left + 'px';
-    rule.style.top = r.top + 'px';
-    rule.style.width = r.width + 'px';
-    rule.classList.add('show');
+  /* The frame's target rect: the block under the pointer, grown by PAD and
+     clamped vertically so its corners stay on screen for a block taller than
+     the viewport — or, over nothing pickable, a small reticle on the pointer. */
+  function setTarget() {
+    if (hit) {
+      const r = hit.getBoundingClientRect();
+      if (r.width < 2 || r.bottom < 2 || r.top > vh() - 2) { reticle(); return; }
+      const top = Math.max(EDGE, r.top - PAD);
+      const bot = Math.min(vh() - EDGE, r.bottom + PAD);
+      tx = r.left - PAD; tw = r.width + 2 * PAD;
+      ty = top; th = Math.max(RET, bot - top);
+      snapped = true;
+    } else {
+      reticle();
+    }
+  }
+  function reticle() {
+    tx = pX - RET / 2; ty = pY - RET / 2; tw = RET; th = RET; snapped = false;
+  }
+  function writeCur() {
+    cur.style.transform = 'translate(' + fx + 'px,' + fy + 'px)';
+    cur.style.width = fw + 'px'; cur.style.height = fh + 'px';
+    cur.classList.toggle('snapped', snapped);
+    dot.style.transform = 'translate(' + dx + 'px,' + dy + 'px)';
+  }
+  // Snap current straight to target — on each appearance (no fly-in from where
+  // it was last parked) and whenever reduced motion is asked for.
+  function prime() {
+    setTarget();
+    fx = tx; fy = ty; fw = tw; fh = th; dx = pX; dy = pY;
+    writeCur();
+  }
+  function loop(ts) {
+    raf = requestAnimationFrame(loop);
+    const dt = last ? Math.min((ts - last) / 1000, 0.05) : 0.016; last = ts;
+    if (curVis) setTarget();
+    const k = (reduce && reduce.matches) ? 1 : 1 - Math.exp(-F_RATE * dt);
+    const kd = (reduce && reduce.matches) ? 1 : 1 - Math.exp(-D_RATE * dt);
+    fx += (tx - fx) * k; fy += (ty - fy) * k;
+    fw += (tw - fw) * k; fh += (th - fh) * k;
+    dx += (pX - dx) * kd; dy += (pY - dy) * kd;
+    writeCur();
+  }
+  function startLoop() { if (!raf) { last = 0; raf = requestAnimationFrame(loop); } }
+  function stopLoop() { if (raf) { cancelAnimationFrame(raf); raf = 0; } }
+
+  function showCur() {
+    if (curVis) return;
+    curVis = true;
+    prime();
+    cur.classList.add('show'); dot.classList.add('show');
+  }
+  function hideCur() {
+    if (!curVis) return;
+    curVis = false;
+    cur.classList.remove('show'); dot.classList.remove('show');
   }
 
   const onMove = (e) => {
     if (!armed) return;
-    // Over our own chrome (the window, the topbar) there is nothing to pick.
-    if (PR.ui.host && e.composedPath().includes(PR.ui.host)) { drawRule(null); return; }
-    drawRule(blockAt(e.target));
+    pX = e.clientX; pY = e.clientY;
+    // Over our own chrome (the window, the topbar), or off the reader entirely,
+    // there is nothing to pick — hand the native cursor back.
+    if (PR.ui.host && e.composedPath().includes(PR.ui.host)) { hit = null; hideCur(); return; }
+    if (!e.target.closest || !e.target.closest('#pr-reader')) { hit = null; hideCur(); return; }
+    hit = blockAt(e.target);
+    startLoop(); showCur();
   };
-  const onScroll = () => { if (armed && hit) drawRule(hit); };
   const onClick = (e) => {
     if (!armed) return;
     if (!e.target.closest || !e.target.closest('#pr-reader')) return;
@@ -238,7 +311,6 @@
     document.documentElement.classList.add('pr-inspect');
     btn.classList.add('active'); btn.setAttribute('aria-pressed', 'true');
     document.addEventListener('pointermove', onMove, true);
-    document.addEventListener('scroll', onScroll, true);
     document.addEventListener('click', onClick, true);
   }
   function disarm() {
@@ -247,9 +319,8 @@
     document.documentElement.classList.remove('pr-inspect');
     btn.classList.remove('active'); btn.setAttribute('aria-pressed', 'false');
     document.removeEventListener('pointermove', onMove, true);
-    document.removeEventListener('scroll', onScroll, true);
     document.removeEventListener('click', onClick, true);
-    drawRule(null);
+    hideCur(); stopLoop(); hit = null;
   }
 
   /* ── drag / resize ─────────────────────────────────────────────────────
@@ -304,7 +375,8 @@
   /* ── init ──────────────────────────────────────────────────────────────── */
   async function init(root) {
     reader = root || document.getElementById('pr-reader');
-    btn = $('#inspectBtn'); win = $('#inspectWin'); rule = $('#inspectRule'); hints = $('#inspectHints');
+    btn = $('#inspectBtn'); win = $('#inspectWin'); hints = $('#inspectHints');
+    cur = $('#inspectCur'); dot = $('#inspectDot');
     if (!btn || !win || !reader) return;
 
     hints.innerHTML = '<span class="ih-title">Bildschirmfoto</span>' +

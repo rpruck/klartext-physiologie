@@ -126,9 +126,14 @@ comparison a feature rather than a second browser window with the extension swit
   page the browser has never laid out.
 
 `inspect.js` is then one `closest('[data-pr-o]')` and one `querySelector`. It arms from a topbar
-icon (`html.pr-inspect` gives the reader a crosshair and suppresses selection, which also keeps
-`tools.js`'s highlight popover out of the way), draws a hairline above the block under the pointer,
-and on click renders the snapshot into an iframe scrolled to the match — loaded from a **`blob:`
+icon (`html.pr-inspect` hides the native cursor and suppresses selection, which also keeps
+`tools.js`'s highlight popover out of the way), draws a **magnetic cursor** over the block under
+the pointer — four corner brackets that spring out to wrap the block (Motion's "magnetic target",
+in plain JS: one rAF loop eases the frame rect toward its target with frame-rate-independent
+smoothing and recomputes that target every frame, so a snapped frame tracks the block on scroll
+with no scroll handler), plus a dot on the real pointer; deliberately static, never rotating,
+and collapsed to a small reticle off any block. On click it renders the snapshot into an iframe
+scrolled to the match — loaded from a **`blob:`
 URL, not `srcdoc`**, because an iframe srcdoc document never enters quirks mode (the parser skips
 the doctype's mode-setting step for it), which would have laid the book out under rules it has
 never once been laid out under. The blob inherits the page's origin, so `contentDocument` stays
