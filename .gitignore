@@ -12,11 +12,17 @@ Thumbs.db
 *.swp
 
 # Real page snapshots and everything mkharness.py generates from them — all
-# regenerable, and copies of physiologie.cc's own pages. Only the generator
-# itself is tracked.
+# regenerable, and copies of physiologie.cc's own pages. Only the generators
+# themselves are tracked.
 .test/
 dev/*
 !dev/mkharness.py
+!dev/archive.py
+
+# Local mirror of physiologie.cc (dev/archive.py output): the flat byte-exact
+# site copy, its manifest, and the dated zips. Bulky and third-party content —
+# the deliverable is the zip, kept out of git.
+/archive/
 
 # Superseded Strategy-B prototype (src/ is the source of truth now)
 proto/
