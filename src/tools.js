@@ -354,7 +354,7 @@
     const range = sel.getRangeAt(0);
     const block = commonBlock(range);
     if (!block || !range.toString().trim()) return hidePop();
-    pending = { anchor: A().buildAnchor(range, block), block };
+    pending = { anchor: A().buildAnchor(range, block), block, text: range.toString() };
     showPopAt(range.getBoundingClientRect());
   }
   function showPopAt(rect) {
@@ -364,6 +364,25 @@
     pop.classList.add('show');
   }
   function hidePop() { const pop = q('#hlPop'); if (pop) pop.classList.remove('show'); }
+
+  // Copy plain text to the clipboard. physiologie.cc is served over plain http →
+  // not a secure context → navigator.clipboard is undefined there, so we fall
+  // back to the legacy execCommand path (which the click's user gesture allows in
+  // any context). The async API is tried first for the odd https/localhost case.
+  function copyToClipboard(text) {
+    if (!text) return Promise.resolve(false);
+    if (navigator.clipboard && window.isSecureContext)
+      return navigator.clipboard.writeText(text).then(() => true, () => execCopy(text));
+    return Promise.resolve(execCopy(text));
+  }
+  function execCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:-1000px;left:0;opacity:0';
+    document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (_) {}
+    ta.remove(); return ok;
+  }
 
   function commitHighlight(color) {
     if (!pending) return null;
@@ -594,11 +613,24 @@
         openLightbox(img.currentSrc || img.src, figCaption(img), '');
       });
       reader.addEventListener('mouseup', () => setTimeout(handleSelection, 0));
-      reader.addEventListener('contextmenu', (e) => {
+      // Open the highlight menu on left-click (was right-click, which stole the
+      // browser's own copy/inspect menu). A drag/word selection is not a click on
+      // the mark — the collapsed-selection guard lets those reach the popover
+      // instead. A mark carrying a note also answers to double-click (edit the
+      // note), so for those we wait a beat to let the dblclick pre-empt the menu.
+      let markClick = null;
+      reader.addEventListener('click', (e) => {
         const m = e.target.closest('mark.hl'); if (!m) return;
-        e.preventDefault(); openCtx(e.clientX, e.clientY, m.dataset.hid);
+        const sel = window.getSelection(); if (sel && !sel.isCollapsed) return;
+        const hid = m.dataset.hid, x = e.clientX, y = e.clientY;
+        clearTimeout(markClick);
+        if (!m.classList.contains('has-note')) { openCtx(x, y, hid); return; }
+        markClick = setTimeout(() => openCtx(x, y, hid), 200);
       });
-      reader.addEventListener('dblclick', (e) => { const m = e.target.closest('mark.hl.has-note'); if (m) focusNote(m.dataset.hid); });
+      reader.addEventListener('dblclick', (e) => {
+        clearTimeout(markClick);
+        const m = e.target.closest('mark.hl.has-note'); if (m) focusNote(m.dataset.hid);
+      });
       wireTips(reader);
     }
     const unpin = q('#unpinAll'); if (unpin) unpin.onclick = unpinAll;
@@ -606,6 +638,12 @@
     qa('#hlPop .sw').forEach((sw) => sw.onclick = () => { if (pending) commitHighlight(sw.dataset.color); hidePop(); window.getSelection().removeAllRanges(); });
     const act = q('#hlPop .act[data-act="note"]');
     if (act) act.onclick = () => { const h = pending ? commitHighlight('teal') : null; hidePop(); window.getSelection().removeAllRanges(); if (h) addOrEditNote(h.id); };
+    const copyBtn = q('#hlPop .act[data-act="copy"]');
+    if (copyBtn) copyBtn.onclick = () => {
+      const text = pending ? pending.text : '';
+      hidePop(); window.getSelection().removeAllRanges();
+      copyToClipboard(text).then((ok) => { if (ok) showToast('Text kopiert', { duration: 2200 }); });
+    };
     // dismissers (shadow clicks retarget to the host at document level)
     document.addEventListener('mousedown', (e) => { const inUI = e.target === PR.ui.host; if (!inUI) { hidePop(); closeCtx(); } });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { hidePop(); closeCtx(); closeLightbox(); hideTip(); } });

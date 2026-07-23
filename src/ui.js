@@ -112,6 +112,9 @@
       <span class="sw" data-color="underline" title="Unterstreichen"></span>
       <span class="divider"></span>
       <button class="act" data-act="note">✎ Notiz</button>
+      <button class="act act-icon" data-act="copy" title="Text kopieren" aria-label="Text kopieren">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4" width="12" height="17" rx="2"/><rect x="9" y="2.3" width="6" height="3.4" rx="1.2"/></svg>
+      </button>
     </div>`;
 
   /* The book's bookmarks, not the page's — the same drawer as Einstellungen,

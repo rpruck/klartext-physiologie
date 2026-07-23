@@ -576,6 +576,8 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
 .hl-pop .divider { width: 1px; height: 1.1rem; background: var(--hair); margin: 0 .2rem; }
 .hl-pop .act { font-family: var(--font-label); font-size: .6rem; letter-spacing: .08em; text-transform: uppercase; border: 0; background: transparent; color: var(--ink-soft); cursor: pointer; padding: .25rem .35rem; border-radius: 6px; }
 .hl-pop .act:hover { color: var(--ink); background: var(--accent-tint); }
+.hl-pop .act-icon { display: inline-flex; align-items: center; justify-content: center; padding: .28rem .32rem; }
+.hl-pop .act-icon svg { width: .9rem; height: .9rem; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; display: block; }
 
 /* ── note gutter (hugs the text column's right edge; notes align to marks) ──
    Anchored to the column (50% + measure/2), not the viewport edge, so notes
