@@ -18,6 +18,11 @@ Thumbs.db
 dev/*
 !dev/mkharness.py
 !dev/archive.py
+!dev/pack.py
+
+# Build output — the packed extension (dev/pack.py). Regenerable from src/;
+# the deliverable is the zip, uploaded to the Web Store, not committed.
+/dist/
 
 # Local mirror of physiologie.cc (dev/archive.py output): the flat byte-exact
 # site copy, its manifest, and the dated zips. Bulky and third-party content —
