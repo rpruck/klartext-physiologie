@@ -84,14 +84,14 @@ motion that stays quiet.
   highlight to recolour it, attach a note, or remove it.
 
 <p align="center">
-  <img src="showcase/annotate.png" alt="A pinned figure, a highlight and a margin note" width="820">
+  <img src="showcase/annotate.png" alt="The highlight toolbar over a selection — teal, amber, rose, underline" width="820">
 </p>
 
 - **Margin notes** — anchored in the right gutter, level with their highlight. **Enter** finishes,
   **Shift+Enter** adds a line break, and hovering a note lights up the text it belongs to.
 
 <p align="center">
-  <img src="showcase/notes.png" alt="A pinned figure, a highlight and a margin note" width="820">
+  <img src="showcase/notes.png" alt="A margin note in the right gutter, level with its highlight" width="820">
 </p>
 
 - **Figures** — click to open the lightbox: zoom with the scroll wheel, the − / + buttons or a
@@ -100,7 +100,7 @@ motion that stays quiet.
   readable while you scroll on. Position, size and collapsed state persist per page.
 
 <p align="center">
-  <img src="showcase/sticky-images.png" alt="A pinned figure, a highlight and a margin note" width="820">
+  <img src="showcase/sticky-images.png" alt="Two figures pinned as free-floating cards in the left margin" width="820">
 </p>
 
 - **Undo** — removing a highlight or note, or unpinning a figure, raises a toast with **Rückgängig**.
@@ -112,7 +112,7 @@ motion that stays quiet.
   screenshot shortcuts; the same button closes the window again.
 
 <p align="center">
-  <img src="showcase/preview-original.png" alt="A pinned figure, a highlight and a margin note" width="820">
+  <img src="showcase/preview-original.png" alt="Original ansehen: the untouched original open beside the reader, scrolled to the matching markup" width="820">
 </p>
 
 
@@ -122,14 +122,14 @@ they hold even if the surrounding page shifts (`src/anchor.js`).
 
 ## Yes, there is dark mode.
 <p align="center">
-  <img src="showcase/dark-mode.png" alt="A pinned figure, a highlight and a margin note" width="820">
+  <img src="showcase/dark-mode.png" alt="The reader in dark mode, split against the light theme" width="820">
 </p>
 
 ## Einstellungen (Settings)
 
 | Group | Controls |
 |---|---|
-| **Schrift** | Lesefont — **EB Garamond** (default) · Computer Modern · Source Serif 4 · Newsreader · Inter · Source Sans 3 · IBM Plex Sans<br>Label-/Bildtextfont — **Inter** · Space Mono · IBM Plex Mono · CMU Typewriter<br>Notizfont — **Inter** · IBM Plex Sans · Source Sans 3 · EB Garamond · Space Mono<br>Schriftgröße (19 px) · Zeilenhöhe (1.68) |
+| **Schrift** | Lesefont — **EB Garamond** (default) · Computer Modern · Source Serif 4 · Newsreader · Inter · Source Sans 3 · IBM Plex Sans<br>Label-/Bildtextfont — **Inter** · Space Mono · IBM Plex Mono · CMU Typewriter<br>Notizfont — **Inter** · IBM Plex Sans · Source Sans 3 · EB Garamond · Space Mono<br>Schriftgröße (18 px) · Zeilenhöhe (1.65) |
 | **Layout** | Textbreite (680 px) · Absatzabstand · Textsatz — linksbündig / **Blocksatz** |
 | **Farbe** | Akzentfarbe — **Physio-Türkis `#0e8373`** + Blau · Violett · Terrakotta · Moos + free picker<br>Hintergrund — **Neutral** · Papier · Weiß · Sepia · Dunkel |
 | **Bilder** | Dekobilder ausblenden (on) · Abbildungsrahmen — **Haarlinie** / Schatten / ohne |
@@ -138,12 +138,12 @@ they hold even if the surrounding page shifts (`src/anchor.js`).
 |  | *↺ Zurücksetzen* |
 
 <p align="center">
-  <img src="showcase/settings.png" alt="The same page with the dark background" width="820">
+  <img src="showcase/settings.png" alt="The Einstellungen (settings) panel" width="820">
 </p>
 
 ## How it works
 
-The site encodes its structure visually only — no `<h1>`–`<h6>` anywhere, layout by `<br>` and
+The site encodes its structure visually only — no `<h1>`–`<h6>` on any of its content pages, layout by `<br>` and
 `<center>`, thousands of `<font>` tags. So the extension does not restyle it in place: it
 **extracts and re-renders**. `src/reskin.js` linearises the page into a token stream, assembles a
 semantic block model, and emits clean HTML into a fresh `<main id="pr-reader">`.
