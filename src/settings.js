@@ -36,7 +36,7 @@
     'space-mono': "'Space Mono', ui-monospace, monospace",
   };
   const DEFAULTS = {
-    proseFont: 'eb', labelFont: 'inter-label', noteFont: 'inter', fs: 19, lh: 1.68,
+    proseFont: 'eb', labelFont: 'inter-label', noteFont: 'inter', fs: 18, lh: 1.65,
     measure: 680, gap: 1.0, align: 'justify', accent: '#0e8373',
     bg: 'neutral', hidedeco: true, frame: 'hairline', motion: true, progress: true,
     collapse: true, rail: true, laneImg: true, laneNotes: true,
