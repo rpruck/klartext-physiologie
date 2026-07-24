@@ -182,12 +182,12 @@
             </select>
           </div>
           <div class="field">
-            <div class="f-row"><label for="fs">Schriftgröße</label><span class="val" id="fsVal">19px</span></div>
-            <input type="range" id="fs" min="16" max="24" step="1" value="19">
+            <div class="f-row"><label for="fs">Schriftgröße</label><span class="val" id="fsVal">18px</span></div>
+            <input type="range" id="fs" min="16" max="24" step="1" value="18">
           </div>
           <div class="field">
-            <div class="f-row"><label for="lh">Zeilenhöhe</label><span class="val" id="lhVal">1.68</span></div>
-            <input type="range" id="lh" min="1.35" max="1.95" step="0.01" value="1.68">
+            <div class="f-row"><label for="lh">Zeilenhöhe</label><span class="val" id="lhVal">1.65</span></div>
+            <input type="range" id="lh" min="1.35" max="1.95" step="0.01" value="1.65">
           </div>
         </div>
         <div class="group">
