@@ -6,7 +6,7 @@
 
 <p align="center">
   A Chrome extension that turns <a href="http://physiologie.cc/">physiologie.cc</a> into a calm,
-  readable textbook and study environment.<br>
+  readable study environment.<br>
   Everything stays on your machine.
 </p>
 
