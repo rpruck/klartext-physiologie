@@ -6,12 +6,12 @@
 
 <p align="center">
   A Chrome extension that turns <a href="http://physiologie.cc/">physiologie.cc</a> into a calm,
-  readable textbook — and gives you somewhere to take notes.<br>
+  readable textbook and study environment.<br>
   Everything stays on your machine.
 </p>
 
 <p align="center">
-  <img src="research/after-reader-light.png" alt="A chapter page rendered by the extension" width="820">
+  <img src="showcase/befre-after.png" alt="A before and after comparison of the original website and the rerendered version with the extension" width="820">
 </p>
 
 ---
@@ -21,6 +21,8 @@
 *Reise durch die Physiologie* by H. Hinghofer-Szalkay is an excellent, freely readable physiology
 textbook wrapped in 1990s hand-authored HTML: full-window line lengths, aqua backgrounds, inline
 `<font>` colours, and hundreds of decorative arrows and pointing fingers between you and the text.
+
+Unfortunately, even browsers' reader modes struggle to render the site in a calm and clear fashion.
 
 This extension rebuilds each page as a reading surface — one narrow column, a real heading
 hierarchy, figures at their own resolution — and adds the tools you actually want while studying:
@@ -77,18 +79,30 @@ motion that stays quiet.
 
 ### Studying
 
-<p align="center">
-  <img src="research/after-study-tools.png" alt="A pinned figure, a highlight and a margin note" width="820">
-</p>
 
 - **Highlighting** — select text and pick teal, amber, rose or underline. **Right-click** an existing
   highlight to recolour it, attach a note, or remove it.
+
+<p align="center">
+  <img src="showcase/annotate.png" alt="A pinned figure, a highlight and a margin note" width="820">
+</p>
+
 - **Margin notes** — anchored in the right gutter, level with their highlight. **Enter** finishes,
   **Shift+Enter** adds a line break, and hovering a note lights up the text it belongs to.
+
+<p align="center">
+  <img src="showcase/notes.png" alt="A pinned figure, a highlight and a margin note" width="820">
+</p>
+
 - **Figures** — click to open the lightbox: zoom with the scroll wheel, the − / + buttons or a
   double-click, drag to pan, click the percentage to reset. **„An den Rand heften"** turns a figure
   into a free-floating card you can drag anywhere and resize from the corner, so fine labels stay
   readable while you scroll on. Position, size and collapsed state persist per page.
+
+<p align="center">
+  <img src="showcase/sticky-images.png" alt="A pinned figure, a highlight and a margin note" width="820">
+</p>
+
 - **Undo** — removing a highlight or note, or unpinning a figure, raises a toast with **Rückgängig**.
 - **Original ansehen** — for when you want to know what the page actually said. Arm the scanner icon,
   point at any paragraph, table or figure, and click: the untouched original opens in a window
@@ -96,14 +110,22 @@ motion that stays quiet.
   dragged and resized, and stays live while you keep picking — shrink it to one half and you can
   walk down the column comparing the two. A hint in the opposite corner names your system's
   screenshot shortcuts; the same button closes the window again.
-- **Turn-on animation** — the page is drawn in top→bottom behind a sweeping accent line. It plays
-  **once per browser session**; there is no replay control, and it respects both the motion setting
-  and `prefers-reduced-motion`.
+
+<p align="center">
+  <img src="showcase/preview-original.png" alt="A pinned figure, a highlight and a margin note" width="820">
+</p>
+
+
 
 Annotations survive reloads: they are re-anchored by content hash plus a W3C-style text quote, so
 they hold even if the surrounding page shifts (`src/anchor.js`).
 
-## Einstellungen
+## Yes, there is dark mode.
+<p align="center">
+  <img src="showcase/dark-mode.png" alt="A pinned figure, a highlight and a margin note" width="820">
+</p>
+
+## Einstellungen (Settings)
 
 | Group | Controls |
 |---|---|
@@ -116,7 +138,7 @@ they hold even if the surrounding page shifts (`src/anchor.js`).
 |  | *↺ Zurücksetzen* |
 
 <p align="center">
-  <img src="research/after-reader-dark.png" alt="The same page with the dark background" width="820">
+  <img src="showcase/settings.png" alt="The same page with the dark background" width="820">
 </p>
 
 ## How it works
@@ -158,6 +180,7 @@ icons/                 16 / 32 / 48 / 128
 ```
 
 `CLAUDE.md` is the architecture document — read it before changing the rendering pipeline.
+There are files referenced in `CLAUDE.md` which are not committed to source control, fyi.
 
 ## Development
 
@@ -168,6 +191,11 @@ harness. In short: serve the repo (`python3 -m http.server 8756`), drop latin-1 
 `chrome.runtime.getURL`. `CLAUDE.md` has the full recipe, the representative page spread, and the
 harness caveats.
 
+## Contribution
+
+In the spirit of [physiologie.cc](http://physiologie.cc/) everything is open source and free for you to customize and make your own.
+If you have a feature wish or bug report, you are welcome to reach out or to submit a pull request.
+
 ## Privacy
 
 Nothing leaves your device — no analytics, no network requests, no data sent anywhere. See
@@ -177,7 +205,7 @@ Nothing leaves your device — no analytics, no network requests, no data sent a
 
 ```
 src/ · manifest.json · popup.html · fonts/ · icons/   the extension (source of truth)
-CLAUDE.md            architecture + working notes
+CLAUDE.md            architecture + working notes, some referenced files not committed to source control, ymmv
 PRIVACY.md           privacy policy
 research/            before-* : the original site · after-* : the extension
 dev/mkharness.py     test-harness generator
