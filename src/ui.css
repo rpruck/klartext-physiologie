@@ -203,6 +203,27 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
 .reset.armed { color: var(--accent-ink); border-color: var(--accent-line); background: var(--accent-tint); }
 .saved-note { font-family: var(--font-label); font-size: .6rem; letter-spacing: .06em; color: var(--ink-soft); margin-top: .9rem; opacity: .7; }
 
+/* Where the project lives — the one colophon in the whole UI. Nothing in the
+   shadow root styles bare <a>, so both links bring their own colour and rule or
+   the UA paints them blue.
+   The GitHub pill is the footer's only filled surface: a step off the paper
+   toward --ink, which darkens it on the light themes and lightens it in dark,
+   since --ink flips with the theme. One declaration rather than the panel's
+   paired :host([data-bg="dark"]) override — nothing to drift out of sync, and
+   sepia keeps its warmth because the mix is with --paper, not with grey. */
+.foot-links { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex-wrap: wrap; margin-top: 1rem; }
+.foot-site { font-family: var(--font-label); font-size: .62rem; letter-spacing: .06em; color: var(--ink-soft); text-decoration: none; border-bottom: 1px solid var(--hair); padding-bottom: .12rem; transition: color .18s var(--ease), border-color .18s var(--ease); }
+.foot-site:hover { color: var(--ink); border-color: var(--accent-line); }
+.foot-gh {
+  display: inline-flex; align-items: center; gap: .4rem;
+  font-family: var(--font-label); font-size: .62rem; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--ink-soft); text-decoration: none;
+  background: color-mix(in srgb, var(--ink) 7%, var(--paper));
+  border-radius: 999px; padding: .42rem .8rem;
+  transition: color .18s var(--ease), background .18s var(--ease);
+}
+.foot-gh:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 13%, var(--paper)); }
+
 /* ── bookmark drawer ───────────────────────────────────────────────────────
    The same drawer as Einstellungen, holding a column of rows: where in the
    book · what it is called · what it says · when you marked it. */
