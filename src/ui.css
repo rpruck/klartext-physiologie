@@ -211,8 +211,15 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
    since --ink flips with the theme. One declaration rather than the panel's
    paired :host([data-bg="dark"]) override — nothing to drift out of sync, and
    sepia keeps its warmth because the mix is with --paper, not with grey. */
-.foot-links { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex-wrap: wrap; margin-top: 1rem; }
-.foot-site { font-family: var(--font-label); font-size: .7rem; letter-spacing: .04em; color: var(--ink-soft); text-decoration: none; border-bottom: 1px solid var(--hair); padding-bottom: .12rem; transition: color .18s var(--ease), border-color .18s var(--ease); }
+/* line-height:1 is load-bearing, not tidying. .pr-ui-root sets 1.4 and these
+   two are the only <a>s down here — the reset buttons beside them are <button>,
+   which the UA gives line-height:normal, so they never inherit it. "GitHub" has
+   no descender, so on 1.4 the whole half-leading below the baseline stayed
+   empty and the pill's ink sat 6px under its top edge against 14px above its
+   bottom: symmetric padding, ink 2.4× off-centre. Set here rather than on the
+   pill alone because the row centres its two children against each other. */
+.foot-links { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex-wrap: wrap; margin-top: 1rem; line-height: 1; }
+.foot-site { font-family: var(--font-label); font-size: .7rem; letter-spacing: .04em; color: var(--ink-soft); text-decoration: none; border-bottom: 1px solid var(--hair); padding-bottom: .22rem; transition: color .18s var(--ease), border-color .18s var(--ease); }
 .foot-site:hover { color: var(--ink); border-color: var(--accent-line); }
 /* The one label in the panel that isn't set uppercase: GitHub spells itself
    with a capital H, and uppercasing it throws that away. Tracking comes down
@@ -222,9 +229,25 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
   font-family: var(--font-label); font-size: .7rem; letter-spacing: .02em;
   color: var(--ink-soft); text-decoration: none;
   background: color-mix(in srgb, var(--ink) 7%, var(--paper));
-  border-radius: 999px; padding: .42rem .8rem;
+  /* Uneven on purpose. Flexbox centres the line box, but "GitHub" spends none
+     of the room below its baseline, so centred boxes leave the ink sitting
+     high. .1rem moved from the bottom to the top centres what you can see —
+     and since the mark is already dead-centre on the pill, that is also what
+     puts the mark and the letters on one axis. */
+  border-radius: 999px; padding: .55rem .85rem .45rem;
   transition: color .18s var(--ease), background .18s var(--ease);
 }
+/* tb-glyph-fill's 1.05em is measured for the scanner glyph, whose path uses
+   ~83% of its viewBox. This mark uses 99% of its own, so the same declared
+   height drew 40% more ink than the caps beside it. Sized to the cap height
+   instead, with the overshoot a round mark needs to read level with flat
+   letters. Everything else the classes give — currentColor, width — still holds. */
+/* …and raised off the box's centre onto the letters'. align-items centres both
+   children on the content box, but the text's ink is not centred inside its own
+   line box — no descender — so a box-centred mark reads low against the caps.
+   The nudge lands it with 0.5px of overshoot above the cap line and the same
+   below the baseline, which is how a round shape sits level with flat ones. */
+.foot-gh svg { height: .85em; position: relative; top: -.07em; }
 .foot-gh:hover { color: var(--ink); background: color-mix(in srgb, var(--ink) 13%, var(--paper)); }
 
 /* ── bookmark drawer ───────────────────────────────────────────────────────
