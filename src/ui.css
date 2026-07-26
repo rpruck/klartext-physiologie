@@ -212,11 +212,14 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
    paired :host([data-bg="dark"]) override — nothing to drift out of sync, and
    sepia keeps its warmth because the mix is with --paper, not with grey. */
 .foot-links { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex-wrap: wrap; margin-top: 1rem; }
-.foot-site { font-family: var(--font-label); font-size: .62rem; letter-spacing: .06em; color: var(--ink-soft); text-decoration: none; border-bottom: 1px solid var(--hair); padding-bottom: .12rem; transition: color .18s var(--ease), border-color .18s var(--ease); }
+.foot-site { font-family: var(--font-label); font-size: .7rem; letter-spacing: .04em; color: var(--ink-soft); text-decoration: none; border-bottom: 1px solid var(--hair); padding-bottom: .12rem; transition: color .18s var(--ease), border-color .18s var(--ease); }
 .foot-site:hover { color: var(--ink); border-color: var(--accent-line); }
+/* The one label in the panel that isn't set uppercase: GitHub spells itself
+   with a capital H, and uppercasing it throws that away. Tracking comes down
+   to match — .08em is spacing for caps, and it reads loose on mixed case. */
 .foot-gh {
   display: inline-flex; align-items: center; gap: .4rem;
-  font-family: var(--font-label); font-size: .62rem; letter-spacing: .08em; text-transform: uppercase;
+  font-family: var(--font-label); font-size: .7rem; letter-spacing: .02em;
   color: var(--ink-soft); text-decoration: none;
   background: color-mix(in srgb, var(--ink) 7%, var(--paper));
   border-radius: 999px; padding: .42rem .8rem;
