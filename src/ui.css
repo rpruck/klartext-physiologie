@@ -220,7 +220,14 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
    pill alone because the row centres its two children against each other. */
 /* Set off on the panel's own beat — .group's 1.7rem — so the colophon reads as
    its own thing rather than as a third line of the storage note above it. */
-.foot-links { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex-wrap: wrap; margin-top: 1.7rem; line-height: 1; }
+/* last, not plain, baseline — and the pair is a fallback, not a duplicate.
+   A flex container's FIRST baseline is synthesized from its first item, which
+   here is the mark, and a replaced element's baseline is its bottom edge: plain
+   `baseline` hung the URL 1.4px off. The LAST baseline comes from the pill's
+   last item, which is the word itself. Aligning the row this way also leaves
+   the pill's own centred lockup alone — asking the pill to baseline-align
+   internally pulls the mark 1.4px off the letters it was just levelled with. */
+.foot-links { display: flex; align-items: center; align-items: last baseline; justify-content: space-between; gap: .6rem; flex-wrap: wrap; margin-top: 1.7rem; line-height: 1; }
 .foot-site { font-family: var(--font-label); font-size: .7rem; letter-spacing: .04em; color: var(--ink-soft); text-decoration: none; border-bottom: 1px solid var(--hair); padding-bottom: .22rem; transition: color .18s var(--ease), border-color .18s var(--ease); }
 .foot-site:hover { color: var(--ink); border-color: var(--accent-line); }
 /* The one label in the panel that isn't set uppercase: GitHub spells itself
