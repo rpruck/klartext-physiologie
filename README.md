@@ -34,13 +34,29 @@ small tracked sans for labels and captions, a single restrained accent used only
 never as a fill — a ~680 px measure so lines land at 65–75 characters, generous vertical rhythm, and
 motion that stays quiet.
 
-## Install (unpacked)
+## Install
 
-1. Open **`chrome://extensions`** and switch on **Developer mode** (top right).
-2. **Load unpacked** → select this folder.
-3. Open any page on **http://physiologie.cc/** — the reader draws itself in.
-4. **✦ Einstellungen** (top right of the page) tunes type, width, colour and background. The toolbar
-   icon is the global **on/off** switch.
+Not on the Chrome Web Store yet, so installation is manual — in Chrome, Edge, Brave, or any other
+Chromium browser.
+
+**From a release** (recommended)
+
+1. Download `klartext-physiologie-v<version>.zip` from the
+   [latest release](https://github.com/rpruck/klartext-physiologie/releases/latest) and unzip it.
+2. Open **`chrome://extensions`** and switch on **Developer mode** (top right).
+3. **Load unpacked** → select the unzipped folder.
+
+**From a checkout** — clone the repo and *Load unpacked* the repo folder itself. It carries dev
+tooling and a design prototype the release zip leaves out, but the extension loads the same.
+
+Then:
+
+- Open any page on **http://physiologie.cc/** — the reader draws itself in.
+- **✦ Einstellungen** (top right of the page) tunes type, width, colour and background. The toolbar
+  icon is the global **on/off** switch.
+
+> Chrome disables developer-mode extensions on some managed profiles, and may ask you to confirm
+> them again after a restart.
 
 ## What you get
 
@@ -206,9 +222,12 @@ Nothing leaves your device — no analytics, no network requests, no data sent a
 ```
 src/ · manifest.json · popup.html · fonts/ · icons/   the extension (source of truth)
 CLAUDE.md            architecture + working notes, some referenced files not committed to source control, ymmv
+CHANGELOG.md         what changed, per release
 PRIVACY.md           privacy policy
+LICENSE              GNU GPL v3
 research/            before-* : the original site · after-* : the extension
 dev/mkharness.py     test-harness generator
+dev/pack.py          builds the release zip — whitelists the ship-set off the manifest
 prototype.html       the pre-extension design prototype — historical, kept for reference
 serve.command        double-click (macOS) to serve the folder and open that prototype
 ```
@@ -219,3 +238,8 @@ The book — text and figures — is © H. Hinghofer-Szalkay, published at
 [physiologie.cc](http://physiologie.cc/). This extension only changes how it looks in your browser;
 it neither copies nor redistributes the content. Licences for the bundled typefaces are in
 [`fonts/LICENSES.md`](fonts/LICENSES.md).
+
+## License
+
+[GNU General Public License v3.0](LICENSE) — the extension's own code. The book it renders and the
+bundled typefaces carry their own terms; see **Credits** above.
