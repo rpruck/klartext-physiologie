@@ -218,7 +218,9 @@ input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.12); }
    empty and the pill's ink sat 6px under its top edge against 14px above its
    bottom: symmetric padding, ink 2.4× off-centre. Set here rather than on the
    pill alone because the row centres its two children against each other. */
-.foot-links { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex-wrap: wrap; margin-top: 1rem; line-height: 1; }
+/* Set off on the panel's own beat — .group's 1.7rem — so the colophon reads as
+   its own thing rather than as a third line of the storage note above it. */
+.foot-links { display: flex; align-items: center; justify-content: space-between; gap: .6rem; flex-wrap: wrap; margin-top: 1.7rem; line-height: 1; }
 .foot-site { font-family: var(--font-label); font-size: .7rem; letter-spacing: .04em; color: var(--ink-soft); text-decoration: none; border-bottom: 1px solid var(--hair); padding-bottom: .22rem; transition: color .18s var(--ease), border-color .18s var(--ease); }
 .foot-site:hover { color: var(--ink); border-color: var(--accent-line); }
 /* The one label in the panel that isn't set uppercase: GitHub spells itself
