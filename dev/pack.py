@@ -39,6 +39,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent  # repo root (dev/ is one down)
 STAGE_NAME = "klartext-physiologie"             # unpacked dir + zip basename
 
+# The one thing the manifest cannot tell us to ship. The extension is GPL-3, and
+# §4 wants the licence text conveyed with the work — so a downloaded zip has to
+# carry it, even though no MV3 file ever loads it. Keep this list at exactly the
+# files that are legally part of the distribution, not a back door for extras.
+EXTRAS = ["LICENSE"]
+
 
 def die(msg):
     """Fail loudly — a bad package is worse than no package."""
@@ -133,11 +139,12 @@ def main():
     if not re.fullmatch(r"\d+\.\d+(\.\d+){0,2}", version):
         die(f"manifest version {version!r} is not a valid x.y[.z] string")
 
-    # Ship-set = manifest refs ∪ popup.html's own deps.
+    # Ship-set = manifest refs ∪ popup.html's own deps ∪ the licence.
     refs = manifest_refs(manifest)
     popup = manifest.get("action", {}).get("default_popup")
     if popup and (ROOT / popup).is_file():
         refs += html_refs(ROOT / popup)
+    refs += EXTRAS
     files = resolve(refs)
     warn_orphans(files)
 
